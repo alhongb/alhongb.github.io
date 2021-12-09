@@ -7,19 +7,19 @@ categories: [MIT 6.858, lab]
 ## zook 代码解读
 
 - zookld：负责根据配置启动进程，包括 zookd（Web服务，负责分发），zook http 服务和 zookfs 另外一个服务。zookld 会在 main() 中打开并经监听指定的端口（默认 80，是 Web 服务器对外接口），然后将此端口发给 zookd 使用。
-    1. `start_server()` 起一个 HTTP socket，根据配置文件是 8080
-    2. `NCONF_get_string` 从 .conf 文件中提取目标配置信息，然后 launch_svc 拉起 zookd（execve 可执行文件），负责分发请求，每次 `launch_srv()` 都会创建一对 socketpair，将服务的 fd  放在 `svcfds[]` ，用于内部进程间通信。 zookd 第一个拉起，所以 `svcfds[0]`  是 zookd。
-    3. 使用 `NCONF_get_string` 从配置文件中读出 http_svcs 配置（是 HTTP 服务，html 等，从配置来看二进制也是 zookfs_svc ），用 `CONF_parse_list` 最终也 `launch_svc()`  出一个 http 服务，`svcfds[1]`  是 zook 即 。
-    4. 把 1 创建的 http socket 传给 2 的 zookd、把 3 创建的 http  服务的 socket 发给 zookd
+    1. `start_server()` 起一个 HTTP socket，根据配置文件是 8080 而不是默认的 80；
+    2. `NCONF_get_string` 从 .conf 文件中提取目标配置信息，然后 launch_svc 拉起 zookd（通过 execve 可执行文件），负责分发请求，`launch_srv()` 会创建一对 socketpair，将服务的 fd  放在 `svcfds[]` ，用于内部进程间通信。 zookd 第一个拉起，所以 `svcfds[0]`  是 zookd。
+    3. 使用 `NCONF_get_string` 从配置文件中读出 http_svcs 配置（负责 HTML 等静态页面，从配置来看二进制共用的 zookfs_svc），用 `CONF_parse_list` 最终也 `launch_svc()`  出一个 http zook 服务，作为第二个拉起的服务放在 `svcfds[1]`；
+    4. 把 1 创建的 http socket 和 3 创建的 http zook 服务的 socket 传给步骤 2 的 zookd；
     5. 从配置文件中读出 url pattern 发给 zookd。就是每个服务配置文件中的 url 配置项
-    6. 最后创建其它非 http 的服务，这里是 conf 中 extra_svcs  项配置的 zookfs。
+    6. 最后创建其它非 http 的服务，这里是 conf 中 extra_svcs 项配置的 zookfs 也就是第三个服务。
 
 - zookd：接收客户端的请求，在 `process_client()` 中处理请求，根据 URL path patern 转发给某一个 http 服务处理
-    1. `http_request_line()`，从客户端的请求中提取 path 到 `reqpath`，提取各种 HTTP 请求信息到 env，如 method、protocol 等等，保存到环境变量
+    1. `http_request_line()`，从客户端的请求中提取 path 到 `reqpath`，提取各种 HTTP 请求信息到 env，如 method、protocol 等等，保存到环境变量。
 
-- zookfs：这个进程同时包含 http 服务和其它 non-http 的 cgi 服务
-    1. `http_request_headers()` 解析请求中的 header 信息，保存到环境变量
-    2. `http_serve` 处理请求，根据路径分发给相应 handler：`http_serve_directory` 处理目录（html）、`http_serve_executable` 处理 cgi 脚本
+- zookfs：这个进程同时包含 http 服务和其它 non-http 的 cgi 服务，其中
+    1. `http_request_headers()` 解析请求中的 header 信息，保存到环境变量；
+    2. `http_serve` 处理请求，根据路径分发给相应 handler：`http_serve_directory` 处理目录（html）、`http_serve_executable` 处理 cgi 脚本。
 
 ## exercise 1. 寻找 bug
 
@@ -129,33 +129,33 @@ Program received signal SIGSEGV, Segmentation fault.
 结合代码和 gdb 观察，原来栈上 ret addr 之前（低地址）还有个 handler 函数跳转指针，大致画出溢出发生前栈内存排布如下：
 
 ```
-         ┌─────────────────────┐
-         │                     │
-         │   return addr 4     │
-         │                     │
-         ├─────────────────────┤
-         │                     │
-         │    saved ebp 4      │
-   ebp   │                     │
-   ────> ├─────────────────────┤
-         │                     │
-         │     foo,bar  8      │
-         │                     │
-         ├─────────────────────┤
-         │                     │
-         │     handler  4      │
-         │                     │
-         ├─────────────────────┤
-         │      buf[1024]      │
-         │         .           │
-         │         .           │
-         │         .           │
-         │         .           |
-         │  "/home/httpd/lab"  |--> buf[0~14]
-         ├─────────────────────┤
-         │                     │
-   esp   │                     │
-   ────> │                     │
+      +---------------------+
+      |                     |
+      |   return addr 4     |
+      |                     |
+      +---------------------+
+      |                     |
+      |    saved ebp 4      |
+ebp   |                     |
+----> +---------------------+
+      |                     |
+      |     foo,bar  8      |
+      |                     |
+      +---------------------+
+      |                     |
+      |     handler  4      |
+      |                     |
+      +---------------------+
+      |      buf[1024]      |
+      |         .           |
+      |         .           |
+      |         .           |
+      |         .           |
+      |  "/home/httpd/lab"  |--> buf[0~14]
+      +---------------------+
+      |                     |
+esp   |                     |
+----> |                     |
 ```
 
 显然，为了跳开这个「陷阱」，溢出目标应该改为这个 handler 指针。
@@ -226,11 +226,11 @@ shellcode.S 逐行解读如下：
     inc     %eax         /* syscall arg 1: SYS_exit (1), uses */ //exit 的 syscall number 是 1
                          /* mov+inc to avoid null byte */
                          /* 这里不用立即数 1 是为了避免 shellcode 出现 NULL 字节 */
-                         /* 否则shellcode无法传递  */
+                         /* 以免 shellcode 传递过程中被截断 */
     int     $0x80        /* invoke syscall */
 
  calladdr:
-    call    popladdr /* call 指令的作用，1. push 返回值 STRING 的地址到栈 2. 进入 ppladdr 执行后续指令 
+    call    popladdr /* call 指令的作用，1. push 下一行代码的地址到栈，即 STRING 的地址；2. 进入 ppladdr 执行后续指令 
     .ascii  STRING
 ```
 {: file='shellcode.S'}
