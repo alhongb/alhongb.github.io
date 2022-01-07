@@ -315,7 +315,7 @@ dns_cloudflare_email = cloudflare@example.com
 dns_cloudflare_api_key = 0123456789abcdef0123456789abcdef01234
 ```
 
-其中 `dns_cloudflare_email` 为 Cloudflare 账号邮箱；`dns_cloudflare_api_key` 千万 [Cloudflare - API Keys - Global API Key](https://dash.cloudflare.com/profile/api-tokens) 获取
+其中 `dns_cloudflare_email` 为 Cloudflare 账号邮箱；`dns_cloudflare_api_key` 前往 [Cloudflare - Profile - API Tokens](https://dash.cloudflare.com/profile/api-tokens) 获取（这里选则创建权限 `Edit zone DNS` 的 Token 即可，而不是 `Global API Key`）。
 
 接着在 Docker Hub 上查找到对应的 [Certbot 镜像](https://hub.docker.com/u/certbot/)，我的例子是 certbot/dns-cloudflare，然后运行如下命令申请证书
 
