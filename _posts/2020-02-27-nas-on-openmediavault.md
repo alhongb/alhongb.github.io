@@ -1,7 +1,7 @@
 ---
 title: 搭建 openmediavault NAS
 categories: [Tutorial, NAS]
-tags: [openmediavault]
+tags: [openmediavault, NAS]
 layout: post
 seo:
   date_modified: 2020-04-28 22:53:42 +0800
@@ -121,13 +121,66 @@ sudo wget -O - https://github.com/OpenMediaVault-Plugin-Developers/packages/raw/
 
 安装完毕后，直接在 openmediavault 新增的 `omv-extras` 选项中点击按钮安装 Docker 即可
 
+### 启用 user namespace
+
+默认情况，docker 容器内的 UID 0 用户会映射到主机的 root 用户，因此默认情况下绝大部分容器进程就是以本机 root 用户运行，非常不雅。虽然可以通过指定容器运行的用户来规避，但是实际运用会发现很多镜像会报权限无法正常运行，好在新版本的 docker 已经支持 Linux user namespace 安全能力，可使得容器内的「root」直接映射为主机上的普通用户。
+
+**注意**：务必在创建第一个镜像之前就执行此步骤，否则在启用 user namespace 之前已经创建的容器、volume 等都会在启用后将「冻结」（就是完全隐藏，也无法使用），直到 docker 退出 user namespace 模式。
+
+要启用 docker 的 user namespace 隔离功能，编辑 `/etc/daemon.json` 如下
+
+```json
+{
+  "userns-remap": "default"
+}
+```
+
+其中 `default` 表示使用 docker 默认创建的用户、用户组来执行映射，也可以自行指定要映射的用户。详细配置方法参考[官网](https://docs.docker.com/engine/security/userns-remap/)。
+
+开启 userns-remap 后，使用 systemctl restart docker 使之生效，并可以使用以下命令查看是否生效：
+
+```sh
+$ grep dockremap /etc/subuid
+dockremap:231072:65536
+$ grep dockremap /etc/subgid
+dockremap:231072:65536
+```
+
+上面的 subuid/subgid 是 Linux 的从属（subordinate）uid/gid 配置文件， 其中 `dockremap:231072:65536` 被分配了从 231072 开始，  231072 + 65536 结束的 uid/gid 范围。这样，docker 容器内的 uid/gid `0` 就会映射到主机上的 uid/gid 231072，而 uid/gid `1` 则映射为主机上的 uid/gid 231072，以此类推。显然 uid/gid 231072 在主机上是毫无权限的，甚至并非是一个真实存在的用户或用户组。
+
+此后运行容器，通过 `ps` 命令可以看到容器进程的 uid 不再是 root，而是 231072
+
+当然，有些场景容器需要高权限运行，比如下面提到的 Portainer 这时，就可以用 `--userns=host` 参数来豁免 user namespace 隔离。
+
 ### 安装 Portainer
 
 Portainer 是一个轻量级的 Docker 图形化管理工具，可以用来管理宿主机和 Docker Swarm 集群。Portainer 本身也是以容器运行，因此安装过程就是创建和运行一个容器。
 
-omv-extras 也提供了 Portainer 的安装界面，直接用它来安装即可。
+omv-extras 也提供了 Portainer 的安装界面，直接用它来安装即可。（**注意**：若启用了 docker namespace，需手动安装，方法见下）
 
 安装完成后访问 *openmediavualt_host_ip*:9000 即可访问其 Web 界面，首次登录需要创建一个管理员用户，然后会让你选择要连接的 Docker 环境，这里我们选择 `Local`，即此前安装的 Docker。
+
+可选：手动安装 Portainer（假设 docker 已经启用了 docker user namespace）：
+
+进入 https://www.portainer.io/install 选择 CE 版本，按官方指导进行安装（添加  `--userns=host` 参数以适应启用了 docker user namespace），例如：
+
+```sh
+docker volume create portainer_data
+docker run -d -p 9000:9000 -p 8000:8000 -p 9443:9443 --userns=host --name portainer \
+    --restart=always \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v portainer_data:/data \
+    portainer/portainer-ce:2.11.0
+```
+
+要升级 Portainer：
+
+```sh
+docker stop portainer
+docker rm portainer
+```
+
+然后重新执行上面的 docker run 命令即可
 
 ## 部署 NAS 常用应用容器
 
