@@ -55,14 +55,16 @@ ss-server -u -c /etc/shadowsocks-server.json &
 
 点击 `Firewall - Traffic Rules` 添加一条防火墙规则，使得 WAN 侧（即 Internet）能够访问到 Shadowsocks 监听的端口
 
-![openwrt shadowsocks server firewall](/assets/img/post/2019/openwrt-shadowsocks-server-firewall.png)
+![openwrt shadowsocks server firewall](/assets/img/post/2020/openwrt-shadowsocks-server-firewall.png)
 
 到此所有安装配置工作完成。
 
 ## 远程连接到内部网络
 
-以 Android 客户端为例：路由规则选择`全局`，让手机全局连接到路由器以访问内网地址，此外为了能正常解析域名（包括内网主机名），还需要将 `远程 DNS` 选项修改为 192.168.1.1（指向 OpenWrt 内建的 dnsmasq DNS 服务）并勾选 `使用 UDP DNS`。
+以 Android 客户端为例：路由规则根据需要选择`全局` 或 `绕过中国大陆`，让手机连接到路由器以访问内部网络，此外为了能正常解析域名（包括内网主机名），还需要将 `远程 DNS` 选项修改为 192.168.1.1（指向 OpenWrt 内建的 dnsmasq DNS 服务）并勾选 `使用 UDP DNS`。注意：适用于旧版客户端，新版客户端须参考以下文章更新。
 
-2021-06 更新：新版本 Shadowsocks 客户端 DNS 按上述方法配置似乎只能解析内网主机，外网无法解析，此时保持默认的 dns.google 即可修复。
+2021-06 更新：新版本 Shadowsocks 客户端 DNS 按上述方法配置似乎只能解析内网主机，外网无法解析，原因不明，此时保持默认的 dns.google 即可修复（但无法解析内网）。
 
-![Shadowsocks Clent Config](/assets/img/post/2019/client-configuration-for-openwrt-shadowsocks-server.jpg)
+2022-02 更新：造成上述异常的实际原因是新版本 Shadowsocks Android 客户端不再支持使用 UDP 来请求远程 DNS 服务器，只会用 TCP 来请求，那么当远程 DNS 设置为路由器上的 dnsmasq 时，虽然 dnsmasq 支持 TCP，但若其配套的上游 DNS 服务器（例如 ChinaDNS）不支持 TCP（可以通过 `netstat -nalp` 确定这一点），则客户端的 TCP DNS 请求在转发给这些上游 DNS 时就会失败（dnsmasq 日志显示 `REFUSED`）。~~终极解决办法（不稳定）：在 dnsmasq 的 `DNS forwardings` 选项中额外加入支持 TCP 请求的 `8.8.8.8#53` 作为备用 DNS~~（多个上游 DNS 存在时，dnsmasq 会按次序请求，仅当请求失败时使用后续的 DNS，因此此操作几乎没有副作用）。参考：[dnsmasq 一直返回 REFUSED](https://github.com/aa65535/openwrt-dns-forwarder/issues/30#issue-687825881)
+
+![Shadowsocks Clent Config](/assets/img/post/2020/client-configuration-for-openwrt-shadowsocks-server.jpg)
