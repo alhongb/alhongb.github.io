@@ -139,10 +139,12 @@ git clone https://android.googlesource.com/kernel/common
 
 ## 常见问题
 
-### 添加了环境变量，但 Git Bash 仍然报找不到 Python 的错误（Windows）
+- 添加了环境变量，但 Git Bash 仍然报找不到 Python 的错误（Windows）
 
 ```
 /bin/env: python: No such file or directory
 ```
 
 这种情况在 Git Bash 中执行 `echo $PATH` 会发现 Python 不在 PATH 变量中，解决办法是重启电脑以及重装 Git，让 Git 重新读取 Windows 的环境变量。
+
+- 如果 Git Bash 执行 repo init 出现 PermissionError 的错误，以管理员身份运行即可
