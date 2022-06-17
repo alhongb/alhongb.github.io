@@ -410,7 +410,7 @@ ssl_certificate_key /etc/letsencrypt/live/linhongbo.com/privkey.pem;
 
 反向代理可以使局域网内的 Web 服务直接通过标准的 HTTP/HTTPS 域名、端口（80/443）访问。openmediavault 预置安装了 Nginx（被其管理界面使用），我们直接复用这个 Nginx 为本机上的各个容器或其他主机上的服务提供反向代理。
 
-有两种反向代理配置模式：一种是每个为目标 Web 服务创建一个代理 Virtual Host，另一种则是直接在主 Host 下分配 `location` 目录。前者需要为每个代理 Host 增加 DNS 记录，配置和维护起来稍显麻烦，好处是对浏览器比较友好；后者则只需维护一个主 Host 的 DNS，配置起来也相对简洁容易。
+有两种反向代理配置模式：一种是每个为目标 Web 服务创建一个代理 Subdomain，另一种则是直接在主 Host 下分配 `location` 目录。前者需要为每个代理 Host 增加 DNS 记录，配置和维护起来稍显麻烦，好处是对浏览器比较友好；后者则只需维护一个主 Host 的 DNS，配置起来也相对简洁容易。
 
 ### location 目录反向代理
 
@@ -494,9 +494,9 @@ location /transmission {
 }
 ```
 
-### Virtual Host 反向代理
+### Subdomain 反向代理
 
-以配置 Nextcloud 为例，首先创建其 Virtul Host 配置文件：
+以配置 Nextcloud 为例，首先创建其 Subdomain 配置文件：
 
 ```sh
 vim /etc/nginx/sites-available/nextcloud
@@ -527,7 +527,7 @@ server {
 
 其中，
 
-- `ipv6only=off` 表示监听的 ipv6 socket 既可以处理 ipv6 也可以处理 ipv4 数据包（这是 Linux 的一个新特性，新版 Ningx 默认为 `on`，即在该端口上仅监听 ipv6 数据包）。这个选项可以使配置更简洁，而无需（且不能）额外配置 ipv4 监听语句，形如 `listen 0.0.0.0:80`。但要注意如果有多个 `server` 块监听同一端口，这种写法要求该端口的 `ipv6only=off` 选项**必须**且**只能**出现一次，否则会导致 `Address already in use` 错误（两个端口同时处理 ipv4 请求）或无法处理 ipv4 请求。也就是说由于 openmediavault WEB 界面自身监听的 80 端口和 443 端口（如果启用 HTTPS）在其配置文件中已经配置了 `ipv6only=off`，遵循只能出现一次的规则，你额外的 Virtual Host 配置中 80 和 443 端口就不需且不能再配置 `ipv6only=off` 了。
+- `ipv6only=off` 表示监听的 ipv6 socket 既可以处理 ipv6 也可以处理 ipv4 数据包（这是 Linux 的一个新特性，新版 Ningx 默认为 `on`，即在该端口上仅监听 ipv6 数据包）。这个选项可以使配置更简洁，而无需（且不能）额外配置 ipv4 监听语句，形如 `listen 0.0.0.0:80`。但要注意如果有多个 `server` 块监听同一端口，这种写法要求该端口的 `ipv6only=off` 选项**必须**且**只能**出现一次，否则会导致 `Address already in use` 错误（两个端口同时处理 ipv4 请求）或无法处理 ipv4 请求。也就是说由于 openmediavault WEB 界面自身监听的 80 端口和 443 端口（如果启用 HTTPS）在其配置文件中已经配置了 `ipv6only=off`，遵循只能出现一次的规则，你额外的 Subdomain 配置中 80 和 443 端口就不需且不能再配置 `ipv6only=off` 了。
 - `server_name` 指定服务对应的域名
 - `ssl_certificate` 和 `ssl_certificate_key` 分别填写先前申请的 Let's Encrypt 证书、私钥文件；
 - `proxy_ssl_verify off` 表示关闭 Nginx 到上游服务器（Nextcloud 容器服务）的 SSL/TLS 校验，由于我是反向代理到 Nextcloud 容器的 HTTPS 服务，因此该选项必须。
@@ -555,6 +555,42 @@ nginx -s reload
 ## VPN
 
 VPN 可以在公网和家庭局域网之间创建隧道，从而容易访问内网的各项服务。很多路由器都提供了这项功能。如果你想使用 Shadowsocks 来替代 VPN，可以参考博主的这篇文章：[OpenWrt 安装 Shadowsocks Server](https://linhongbo.com/posts/shadowsocks-server-on-openwrt/)
+
+## aria2
+
+transmission 只支持 BT 下载，对于 HTTP 下载，就需要安装额外的软件来补充了。博主选择 aria2。本文采用裸机安装而非容器，方法参见[另外一篇文章](https://linhongbo.com/posts/install-nextcloud-and-aria2/#step-6---%E5%AE%89%E8%A3%85%E5%B9%B6%E9%85%8D%E7%BD%AE-aria2)
+
+另外，aira2 本身只对外提供 RPC 接口，还需要搭配前端界面才行，选项如下：
+
+1. Browser：[AriaNg](https://github.com/mayswind/AriaNg)
+2. Android：[Aria2App](https://play.google.com/store/apps/details?id=com.gianlu.aria2app&hl=en_US&gl=US)
+
+前者搭配 Nginx 反向代理时的配置如下：
+
+```
+server {
+    listen [::]:80;
+    listen [::]:443 ssl http2;
+
+    server_name aria2.example.com;
+
+    client_max_body_size 25M;
+
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+    ssl_verify_client off;
+    proxy_ssl_verify off;
+
+    location / {
+        root /var/www/ariang;  # ariang 安装目录
+        index index.html;
+    }
+
+    location /jsonrpc { # 对应 ariang 需要修改的 RPC 地址
+        proxy_pass http://localhost:6800/jsonrpc; # 用这种方式实现 HTTPS 反向代理 HTTP RPC，否则浏览器拒绝访问
+    }
+}
+```
 
 ## 常见问题
 
