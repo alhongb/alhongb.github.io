@@ -153,7 +153,7 @@ Content Provider 的权限校验实现分为两部分，第一部分是 AMS 实�
             }
         }
         // 第一次机会，检查组件级别权限
-        // 如果组件的 r/w 任意一个权限显式满足或为 null，都代表客户端有机会访问服务端，返回成功。如果都显式拒绝，看下 path 权限有没有机会。
+        // 如果组件的 r/w 任意一个权限显式满足或任意一个为 null，就代表客户端有机会访问服务端，返回成功。否则，看下 path 权限有没有机会。
         if (checkComponentPermission(cpi.readPermission, callingPid, callingUid,
                 cpi.applicationInfo.uid, cpi.exported)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -215,11 +215,11 @@ Content Provider 的权限校验实现分为两部分，第一部分是 AMS 实�
 
 2. 服务端组件并不要求权限或客户端显式具有服务端 ContentProvider 组件维度声明的权限，视为有「机会」。否则下一步。
 
-    **如果 r/w 任意一个权限显式满足或为 null，都代表有机会访问，返回成功。—— 组件权限类比于一套房子的若干大门，当任意大门是开的（权限null或者显式满足），一定是有机会进入房子**
+    **如果组件的 r/w 任意一个权限显式满足或任意一个为 null，就代表客户端有机会访问服务端，返回成功。—— 类比于一套房子的若干大门，和内部的房间门，当任意大门是开的（权限 null 或者显式满足），一定是有机会进入房子**
 
     分别调用 checkComponentPermission()，先后检查客户端是否具有服务端件声明的 `readPermission` 和 `writePermission` 权限，检查客户端是否 PERMISSION_GRANTED。
 
-    >这里组件级的权限检查并不直接检查 ContentProvider 清单文件中声明的 `permission` 属性 (整体权限，同时包含了 r/w)。实际上，AMS 内记录权限信息的 ProviderInfo 类也不存在对应于清单中 `permission` 属性的记录，这是因为 [PackageParser.parseProvider()](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/pm/PackageParser.java#5065) 解析 ContentProvider 组件时，如果  `readPermission` 和 `writePermission` 不存在，则直接将 `readPermission` 和 `writePermission` 都别置为 permission 的值。结合文档 [provider-element](https://developer.android.com/guide/topics/manifest/provider-element#prmsn) ，可知 r/w 的权限优先于 permission：当权限同时存在，以 r、w 为准，只有当 r/w 没有显式指定时，permission 的值覆盖 r/w。
+    注意：这里 AMS 对组件级的权限检查并不直接检查 ContentProvider 清单文件中声明的 `permission` 属性 (整体权限)。实际上，AMS 内记录实例权限信息的 ProviderInfo 类也不存在对应于清单中 `permission` 属性的字段，这是因为 [PackageParser.parseProvider()](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/pm/PackageParser.java#5065) 解析 ContentProvider 组件时，权限信息会拍扁为 ProviderInfo.readPermission 和 ProviderInfo.readPermission，其取值遵循清单文件中 ContentProvider r/w  权限优先于组件权限的原则：当清单中 r、w 非空时，取 r、w 的值；当 r 或 w 为空无法取到值时，对应地以 permission 的值为准（包括空，即最终取值 null）。参考文档 [provider-element](https://developer.android.com/guide/topics/manifest/provider-element#prmsn) 
 
     checkComponentPermission 的实现在 [ActivityManager.checkComponentPermission()](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/app/ActivityManager.java#4213) ，会检查 exported 和权限拥有情况（其中权权限检查是调用 PMS 的接口）。当 exported = false 时直接返回失败，exported = true 时才检查权限，并且如下代码可以验证：当服务端声明的权限为 null 时返回 PERMISSION_GRANTED，即无权限保护时即可访问 ContentProvider（准确说还只是获取 Binder 句柄）。
 
