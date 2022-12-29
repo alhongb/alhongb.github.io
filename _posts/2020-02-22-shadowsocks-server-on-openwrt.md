@@ -44,11 +44,17 @@ vim /etc/shadowsocks-server.json
 
 ### Step 3 - 创建开机启动脚本
 
-```sh
-vim /etc/rc.local
+出于安全考量，安装 sudo 来切换程序运行的用户和用户组
 
+```sh
+opkg install sudo
+```
+
+然后编辑 `/etc/rc.local` 启动脚本，增加一行启动命令：
+
+```
 ## 在文件最后， exit 0 之前（如果有的话）加此行启动命令
-ss-server -u -c /etc/shadowsocks-server.json &
+sudo -u nobody -g nobody ss-server -u -c /etc/shadowsocks-server.json &
 ```
 
 ### Step 4 - 添加防火墙规则
