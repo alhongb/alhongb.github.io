@@ -13,27 +13,29 @@ seo:
 
 一般场景，OpenWrt 路由器工作在「Router"」模式，包含了 NAT、拨号、DHCP、DNS 等功能。当想让一台无线 OpenWrt 设备仅作为无线接入点，而不提供路由功能，就需要让其工作在「Bridged AP」模式（俗称「无线AP」）。
 
-![Bridged AP 模式网络拓扑](/assets/img/post/bridged.ap_v3.png)
+![Bridged AP 模式网络拓扑](/assets/img/post/2018/bridged.ap_v3.png)
 
-按获取 IP 方式的不同，有两种方法让 OpenWrt 路由器工作在 AP 模式
+按 AP 获取 IP 方式的不同，有两种方法让 OpenWrt 路由器工作在 AP 模式。
 
-### 方法 1 - 静态 IP 模式
+### 方法 1 - 手动设置 IP 模式
 
-`OpenWrt` - `Interfaces` - `LAN`
+AP 进入 `OpenWrt` - `Interfaces` - `LAN`
 
 在 `Common Configuration` 中将 LAN 接口的静态 Ipv4 地址设置为与主路由 LAN 同网段的 IP，例如：主路由的 192.168.1.1，则这里可设置为 192.168.1.2。
 
-在 `DHCP Server` 中勾选 `Disable DHCP for this interface.` 关闭本机 DHCP，由主路由进行 DHCP，以免冲突。
+然后在 `DHCP Server` 中勾选 `Disable DHCP for this interface.` 关闭 AP 的 DHCP，由主路由进行 DHCP，以免冲突。
 
-### 方法 2 - 自动获取 IP 模式
+最后用一根网线将 AP 的 LAN 和主路由的 LAN 相连，即可实现 AP 模式。
 
-`OpenWrt` - `Interfaces` - `LAN`
+### 方法 2 - AP 自动获取 IP 模式
 
-在 `Common Configuration` 中修改 `Portocol` 协议为 `DHCP client`
+AP 进入 `OpenWrt` - `Interfaces` - `LAN`
 
-方法二很简单，也比较灵活，但有一个缺点，即本机 IP 地址是随机的，要进入本机的管理面比较麻烦一下。因此最好结合主路由的静态 DHCP 规则或固定的局域网本地域名使用，参间本文 为设备配置本地域名本地域名 章节。
+在 `Common Configuration` 中修改 `Portocol` 协议为 `DHCP client`，然后用一根网线将 AP 的 LAN 和主路由的 LAN 相连，即可实现 AP 模式。
 
-**注意：**博主建议使用方法 2，因为这样配置的路由器比较灵活：一次配置，多次使用，不需要根据主路由手动配置静态 IP。
+方法二相对简单灵活，但有一个缺点，即本机 IP 地址是随机的，导致要进入 AP 的管理面会有些棘手。因此最好结合主路由的静态 DHCP 规则或固定的局域网本地域名使用，参间本文 为设备配置本地域名本地域名 章节。
+
+**注意：**博主建议使用方法 2，因为这样配置的 AP 可实现一次配置，多次使用，不需要根据主路由手动配置静态 IP。
 
 参考：[Bridged AP OpenWrt Wiki](https://wiki.openwrt.org/doc/recipes/bridgedap)
 
@@ -87,6 +89,38 @@ kmod-usb-net-rndis, kmod-usb-net, kmod-usb2, usb-modeswitch, kmod-usb2-pci, kmod
 ```
 
 然后参考 USB 绑定上网的配置方法
+
+## dnsmasq 缓存优化
+
+- 优化 1 - 设置最小缓存时间
+
+在 /etc/dnsmasq.conf 最后加入一行 `min-cache-ttl=3600` 使得所有 DNS 的缓存强制至少为一个小时
+
+- 优化 2 - 增加缓存大小
+
+先看当前缓存是否不够用：
+
+openwrt 查看 dnsmasq 日志
+
+```
+killall -s USR1 dnsmasq
+logread
+```
+
+例如：
+cache size 2000, 1606/17789 cache insertions re-used unexpired cache entries.
+
+这里 17789 ，显示缓存插入数，1606 表示其中有 1606 次插入是因为空间不够而将未过期的条目剔除
+
+所以要扩大缓存大小，进入 luci 界面设置即可，可设置为 3000
+
+[dnsmasq 日志格式解读参考](https://serverfault.com/questions/923164/how-to-understand-dnsmasq-logs)
+
+## 设置 DMZ 主机
+
+进入 `Firewall - Port Forwards` 创建一个新的规则，其中 Protocol 选取 any，Source Zone 选 wan，Destination Zone 选 lan，Internal IP address 选 DMZ 主机的 IP。
+
+注意，openwrt 的端口转发规则是多条规则按从上到下优先级，先匹配到规则后不再匹配后续的规则
 
 ## 桥接多个网卡适配器到 LAN
 
