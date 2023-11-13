@@ -3,13 +3,17 @@ layout: post
 title: OpenWrt Shadowsocks 安装&配置指南
 categories: [Tutorial, Shadowsocks]
 tags: [OpenWrt, Shadowsocks]
-seo:
-  date_modified: 2020-11-15 15:39:56 +0800
 ---
+
+## 前言
+
+这是一篇 OpenWrt 19（19.07.4 版本验证）下安装 Shadowsocks 的教程。由于 OpenWrt 从 22.03.0 开始，使用 nftables 代替了 iptables 来配置 Linux 的网络过滤规则，而本文中部分软件截止文章更新时仍未对此做兼容，因此**下文所述方案已经无法在最新版本的 OpenWrt 正常工作**，因此如果你是新版本的 OpenWrt，请绕行或关注 [luci-app-shadowsocks](https://github.com/shadowsocks/luci-app-shadowsocks/issues/301) 是否更新了新的版本。
+
+同时，如果你只使用机场，大部分机场使用 Clash 就可以很好地工作，因此博主强烈建议在 OpenWrt 下使用 ShellCrash，详细安装配置过程参考[这篇文章](https://linhongbo.com/posts/how-to-use-clash-on-openwrt/)。
 
 ## 简介
 
-这是一篇 OpenWrt（19.07.4 版本验证）下安装 Shadowsocks 的教程。文章先介绍了整体软件栈和通信原理，然后详细说明了各个软件的安装、配置过程，最终可搭建一个路由规则是国内 IP 直连、其余 IP 走透明代理的翻墙路由器（即 CHNRoutes 黑名单模式）。
+文章先介绍了整体软件栈和通信原理，然后详细说明了各个软件的安装、配置过程，最终可搭建一个路由规则是国内 IP 直连、其余 IP 走透明代理的翻墙路由器（即 CHNRoutes 黑名单模式）。
 
 要使用 GFWList 路由模式（即仅被 GFW 封锁的流量走代理），请参阅本站另外一篇文章：[《OpenWrt Shadowsocks GFWlist 配置教程》]({% post_url 2019-06-21-shadowsocks-on-openwrt-with-gfwlist %})。
 
@@ -23,7 +27,7 @@ Shadowsocks for OpenWrt 是基于 shadowsocks-libev 移植的，包含 **ss-loc
 
 其中，**ss-redir** 负责将 OpenWrt 的 TCP/UDP 出口流量透明地转发至境外 shadowsocks 代理服务器；**ss-local** 是本地 SOCKS5 代理服务器，可额外地为浏览器等客户端应用提供 SOCKS5 代理服务；**Dnsmaq** 是 OpenWrt 的默认 DNS 转发服务，本方案中负责接收来自局域网的 DNS 请求后转发给 ChinaDNS 处理；**ChinaDNS** 是一个开源的防 DNS 污染解决方案，它通过 **ss-tunnel** 转发 DNS 请求到墙外服务器，从而获取无污染的解析结果。
 
-## **Step 1 - 安装&配置 Shadowsocks**
+## Step 1 - 安装&配置 Shadowsocks
 
 ### 安装 Shadowsocks
 
@@ -112,14 +116,14 @@ opkg install xxx.ipk
     使能 `Transparent Proxy` 和 `Port Forward`，其中 `UDP-Relay` 是 UDP 转发功能，这里要将其开启，其余配置项保持默认即可。
 
 - Access Control
-    `Bypassed IP List` 选择 `ChinaDNS CHNRoute`
-    Shadowsocks 的访问规则控制。一种合适规则是国外网站走 Shadowsocks 代理而国内网站直连，这样通常还可以加速国外网站。
+    `Bypassed IP List` 选择 `ChinaDNS CHNRoute`（ChinaDNS 安装后，IP 路由文件的路径，例如 `/etc/chinadns-ng/chinalist.txt`）或自定义 CHNRoute 文件地址（参考[安装 ChinaDNS](#安装-chinadns) 中关于 `/etc/chinadns_chnroute.txt` 的描述）
+    Shadowsocks 的访问规则控制。CHNRoute 是一种合适规则是国外网站走 Shadowsocks 代理而国内网站直连，这样通常还可以加速国外网站，相应的，也可以选择 GFWRoute。
 
-## Step 2 方案一 - 采用 ChinaDNS
+## Step 2 安装&配置 ChinaDNS
 
 国内运营商网络 DNS 污染严重，导致大量境外域名无法正确解析，而 shadowsocks-libev 本身并没有解决 DNS 污染问题，需要配合 [ChinaDNS](https://github.com/aa65535/openwrt-chinadns) 组件来解决。
 
-另外，也可以采用重构优化的 [ChinaDNS-NG](#step-2-方案二---采用-chinadns-ng) 来替代。二者主要区别：
+另外，也可以采用重构优化的 [ChinaDNS-NG](#方案二---采用-chinadns-ng) 来替代。二者主要区别：
 
 - ChinaDNS 安装简单、使用稳定可靠，但最近一次更新是 2015 年；
 - ChinaDNS-NG 是新近的项目，需要自行编译，稳定性还需要验证；
@@ -128,9 +132,11 @@ opkg install xxx.ipk
 
 读者可自行决定选择哪一个方案。
 
-### 安装 ChinaDNS
+### 方案一 - 采用 ChinaDNS
 
-其解决 DNS 污染的思路如下：
+#### 安装 ChinaDNS
+
+ChinaDNS 解决 DNS 污染的思路如下：
 
 > ChinaDNS 分国内 DNS 和可信 DNS。ChinaDNS 会同时向国内 DNS 和可信 DNS 发请求，如果可信 DNS 先返回，则采用可信 DNS 的数据；如果国内 DNS 先返回，又分两种情况，返回的数据是国内的 IP 则采用，否则丢弃并转而采用可信 DNS 的结果。
 > 
@@ -193,7 +199,7 @@ logread | grep crond
 
 ![](/assets/img/post/2018/shadowsocks-chinadns.png)
 
-### 配置 ChinaDNS
+#### 配置 ChinaDNS
 
 勾选 `Also filter results inside China from foreign DNS servers`、将上游 DNS 修改为
 
@@ -219,11 +225,15 @@ logread | grep crond
 
 当配置了多个上游 DNS 时，ChinaDNS 简单通过判断 DNS 的 IP 地址是否在国内来定义为「国内 DNS」， 否则一律为「国外 DNS」，这个隐式逻辑虽然简单易用但会在复杂配置场景带来问题，典型的：当「国内 DNS」是用 Stubby 搭建的本地代理 DNS 时，会将 Stubby 误判成「国外 DNS」，导致非预期的行为。
 
-## Step 2 方案二 - 采用 ChinaDNS-NG
+### 方案二 - 采用 ChinaDNS-NG
 
-[ChinaDNS-NG 项目](https://github.com/zfl9/chinadns-ng) 目前并没有提供预编译包，需要使用 openwrt sdk 来手动编译，比较麻烦，可以使用 [原版 ChinaDNS](#step-2-方案一---采用-chinadns) 替代。
+[ChinaDNS-NG 项目](https://github.com/zfl9/chinadns-ng) 目前并没有提供预编译包，需要使用 openwrt sdk 来手动编译，比较麻烦，可以使用下面的预编译包来安装。
 
-### 编译 ChinaDNS-NG
+#### 使用 ChinaDNS-NG 预编译包安装
+
+可以在 (op.supes.top)[https://op.supes.top/packages/mips_24kc/] 下载安装 ChinaDNS-NG 预编译包，包括一个可执行文件包和一个 luci 包。
+
+#### 编译 ChinaDNS-NG 安装
 
 出于方便本文使用 docker 来创造 openwrt 编译环境。
 
@@ -271,9 +281,9 @@ make package/luci-app-chinadns-ng/{clean,compile} V=s
 
 最后在主机的 `"$(pwd)"/bin` 目录，就能找到编译结果了。
 
-### 安装&配置 ChinaDNS-NG
-
 将将编译出来的 ChinaDNS-NG 和 ChinaDNS-NG LuCI APP 的 ipk 包安装到 openwrt，这里有个坑，由于  ChinaDNS-NG LuCI APP 安装时会再次释放 ChinaDNS-NG 配置文件到系统，若提示文件冲突导致安装失败，可以手动删除冲突的配置文件后再次安装。
+
+#### 配置 ChinaDNS-NG
 
 安装完毕，进入 ChinaDNS-NG 的 Web 界面，修改 `Trusted DNS Servers` 为 `127.0.0.1#5300` ，按你的喜好修改 `China DNS Servers`（这里如果希望使用 DNS over TLS 的，可参考博主的另外一篇[文章](https://linhongbo.com/posts/dns-over-tls-with-stubby-on-openwrt/)），最后启动 ChinaDNS-NG 即可。
 
@@ -288,7 +298,7 @@ OpenWrt 管理面 `Network` -> `DHCP and DNS`
 
 `DNS forwardings` 修改为 `127.0.0.1#5353` 即 ChinaDNS 监听的端口；勾选 `Ignore resolve file`
 
-提示：`Ignore resolve file` 指的是忽略 `/etc/resolv.conf` 中的 DNS ，即 WAN 口的 DNS，默认是电信运营商分配的 DNS；要恢复默认选项（取消勾选），在 `Resolve file` 一栏填入 `/tmp/resolv.conf.auto`
+提示：`Ignore resolve file` 指的是忽略 `/etc/resolv.conf` 中的 DNS ，即 WAN 口的 DNS，默认是电信运营商分配的 DNS；要恢复默认选项（取消勾选），在 `Resolve file` 一栏填入 `/tmp/resolv.conf.auto` 或者 `/tmp/resolv.conf.d/resolv.conf.auto` （新版 OpenWrt）
 
 ## Step 4（可选） - 让路由器自身也翻墙
 
@@ -365,3 +375,10 @@ Address 2: ::
 
 发现 openwrt 使用的 DNS 是上游分配的 DNS，按 [Step 4 - 让路由器自身也翻墙](#step-4可选---让路由器自身也翻墙)处理即可。
 
+**iptables v1.8.7 (legacy): unknown option "--to-ports**
+
+如果 shadowsocks 一直无法启动，使用 `/etc/init.d/shadowsocks start` 报如上错误，是因为 OpenWrt 22 开始改用 nftables 来替代 iptables，所以要额外安装：
+
+```
+opkg install iptables-legacy iptables-mod-nat-extra ipset iptables-nft
+```
