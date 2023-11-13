@@ -1,6 +1,6 @@
 ---
 layout: post
-title: OpenWrt ShellCrash 安装&配置指南
+title: OpenWrt 下安装和使用 Clash (ShellCrash)
 categories: [Tutorial, Clash]
 tags: [OpenWrt, Clash]
 ---
