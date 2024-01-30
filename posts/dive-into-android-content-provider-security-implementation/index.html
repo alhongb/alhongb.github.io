@@ -1,0 +1,417 @@
+<!DOCTYPE html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="day-prompt" content="days ago"><meta name="hour-prompt" content="hours ago"><meta name="minute-prompt" content="minutes ago"><meta name="justnow-prompt" content="just now"><meta name="generator" content="Jekyll v4.3.3" /><meta property="og:title" content="深入探究 Android Content Provider 安全" /><meta property="og:locale" content="en" /><meta name="description" content="Content Provider 通信模型" /><meta property="og:description" content="Content Provider 通信模型" /><link rel="canonical" href="https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/" /><meta property="og:url" content="https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/" /><meta property="og:site_name" content="Hongbo Lin" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2021-11-19T00:00:00+08:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="深入探究 Android Content Provider 安全" /><meta name="twitter:site" content="@twitter_username" /><meta name="google-site-verification" content="google_meta_tag_verification" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-06-30T12:31:00+08:00","datePublished":"2021-11-19T00:00:00+08:00","description":"Content Provider 通信模型","headline":"深入探究 Android Content Provider 安全","mainEntityOfPage":{"@type":"WebPage","@id":"https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/"},"url":"https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/"}</script><title>深入探究 Android Content Provider 安全 | Hongbo Lin</title><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="Hongbo Lin"><meta name="application-name" content="Hongbo Lin"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://fonts.gstatic.com"><link rel="preconnect" href="https://www.google-analytics.com" crossorigin="use-credentials"><link rel="dns-prefetch" href="https://www.google-analytics.com"><link rel="preconnect" href="https://www.googletagmanager.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://www.googletagmanager.com"><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css"><link rel="stylesheet" href="/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/magnific-popup@1.1.0/dist/magnific-popup.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script><body data-spy="scroll" data-target="#toc"><div id="sidebar" class="d-flex flex-column align-items-end" lang="en"><div class="profile-wrapper text-center"><div id="avatar"> <a href="/" alt="avatar" class="mx-auto"> <img src="/assets/img/avatar.png" alt="avatar" onerror="this.style.display='none'"> </a></div><div class="site-title mt-3"> <a href="/">Hongbo Lin</a></div><div class="site-subtitle font-italic">A technology-focused blogger.</div></div><ul class="w-100"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <a href="https://github.com/alhongb" aria-label="github" class="order-3" target="_blank" rel="noopener"> <i class="fab fa-github"></i> </a> <a href="https://twitter.com/twitter_username" aria-label="twitter" class="order-4" target="_blank" rel="noopener"> <i class="fab fa-twitter"></i> </a> <a href=" javascript:location.href = 'mailto:' + ['example','doamin.com'].join('@')" aria-label="email" class="order-5" > <i class="fas fa-envelope"></i> </a> <a href="/feed.xml" aria-label="rss" class="order-6" > <i class="fas fa-rss"></i> </a> <span class="icon-border order-2"></span> <span id="mode-toggle-wrapper" class="order-1"> <i class="mode-toggle fas fa-adjust"></i> <script type="text/javascript"> class ModeToggle { static get MODE_KEY() { return "mode"; } static get DARK_MODE() { return "dark"; } static get LIGHT_MODE() { return "light"; } constructor() { if (this.hasMode) { if (this.isDarkMode) { if (!this.isSysDarkPrefer) { this.setDark(); } } else { if (this.isSysDarkPrefer) { this.setLight(); } } } var self = this; /* always follow the system prefers */ this.sysDarkPrefers.addListener(function() { if (self.hasMode) { if (self.isDarkMode) { if (!self.isSysDarkPrefer) { self.setDark(); } } else { if (self.isSysDarkPrefer) { self.setLight(); } } self.clearMode(); } self.updateMermaid(); }); } /* constructor() */ setDark() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); } setLight() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); } clearMode() { $('html').removeAttr(ModeToggle.MODE_KEY); sessionStorage.removeItem(ModeToggle.MODE_KEY); } get sysDarkPrefers() { return window.matchMedia("(prefers-color-scheme: dark)"); } get isSysDarkPrefer() { return this.sysDarkPrefers.matches; } get isDarkMode() { return this.mode == ModeToggle.DARK_MODE; } get isLightMode() { return this.mode == ModeToggle.LIGHT_MODE; } get hasMode() { return this.mode != null; } get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); } /* get the current mode on screen */ get modeStatus() { if (this.isDarkMode || (!this.hasMode && this.isSysDarkPrefer) ) { return ModeToggle.DARK_MODE; } else { return ModeToggle.LIGHT_MODE; } } updateMermaid() { if (typeof mermaid !== "undefined") { let expectedTheme = (this.modeStatus === ModeToggle.DARK_MODE? "dark" : "default"); let config = { theme: expectedTheme }; /* re-render the SVG › <https://github.com/mermaid-js/mermaid/issues/311#issuecomment-332557344> */ $(".mermaid").each(function() { let svgCode = $(this).prev().children().html(); $(this).removeAttr("data-processed"); $(this).html(svgCode); }); mermaid.initialize(config); mermaid.init(undefined, ".mermaid"); } } flipMode() { if (this.hasMode) { if (this.isSysDarkPrefer) { if (this.isLightMode) { this.clearMode(); } else { this.setLight(); } } else { if (this.isDarkMode) { this.clearMode(); } else { this.setDark(); } } } else { if (this.isSysDarkPrefer) { this.setLight(); } else { this.setDark(); } } this.updateMermaid(); } /* flipMode() */ } /* ModeToggle */ let toggle = new ModeToggle(); $(".mode-toggle").click(function() { toggle.flipMode(); }); </script> </span></div></div><div id="topbar-wrapper" class="row justify-content-center topbar-down"><div id="topbar" class="col-11 d-flex h-100 align-items-center justify-content-between"> <span id="breadcrumb"> <span> <a href="/"> Home </a> </span> <span>深入探究 Android Content Provider 安全</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Post</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> <i class="fa fa-times-circle fa-fw" id="search-cleaner"></i> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper"><div id="main"><div class="row"><div id="post-wrapper" class="col-12 col-lg-11 col-xl-8"><div class="post pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><h1 data-toc-skip>深入探究 Android Content Provider 安全</h1><div class="post-meta text-muted d-flex flex-column"><div> <span class="semi-bold"> Hongbo Lin </span> on <span class="timeago " data-toggle="tooltip" data-placement="bottom" title="Fri, Nov 19, 2021, 12:00 AM +0800" >Nov 19, 2021<i class="unloaded">2021-11-19T00:00:00+08:00</i> </span></div><div> <span> Updated <span class="timeago lastmod" data-toggle="tooltip" data-placement="bottom" title="Thu, Jun 30, 2022, 12:31 PM +0800" >Jun 30, 2022<i class="unloaded">2022-06-30T12:31:00+08:00</i> </span> </span> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="5486 words">30 min read</span></div></div><div class="post-content"><h2 id="content-provider-通信模型">Content Provider 通信模型</h2><p>Android Content Provider 采用 C/S 架构，通信过程可粗略概括为</p><p>App. A use ContentResolver – to communicates –&gt; ContentProvider implemented by App. B</p><p><a href="https://blog.csdn.net/u010753159/article/details/51900318"><img data-proofer-ignore data-src="/assets/img/post/2021/content-provider-class-model.jpg" alt="content_provider_class_model" /></a></p><p>其中，客户端和服务端的通信基于 Binder：</p><blockquote><p>在建立 Binder 通信之前，客户端通过 AMS 获取到服务端的 Binder，具体过程可概括为：客户端从 URI 从提取 CP 的 authorities （CP 的唯一标识），向 AMS 调用 getContentProvider 方法，AMS 收到客户端的 Content Provider 请求后根据 CP 的名称（authorities）向 PMS 查询该 CP 的信息（查询到后会缓存），AMS 根据信息启动 CP 服务端进程，并远程调用 scheduleInstallProvider 通知服务端准备和发布目标 CP，服务端完成 installProvider 后最终反向调用 AMS 的 publishContentProviders 把 CP 注册进来，最后 AMS 再根据条件（权限校验等）把注册进来的 CP 的 Binder 发送给客户端，这样客户端就能和 CP 服务端通信了。<a href="http://gityuan.com/2016/07/30/content-provider/">参考</a></p></blockquote><p><img data-proofer-ignore data-src="/assets/img/post/2021/content_provider_ipc.jpeg" alt="content_provider_ipc" /></p><p>其中 <a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/content/ContentProvider.java">ContentProvider</a> 是服务端要继承的抽象类，其内部定义了 query、delete 等等抽象方法，须要去实现、重写。此外其通过内部成员变量 mTransport 持有内部类 Transport 对象（负责 Binder IPC 通信）：</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+</pre><td class="rouge-code"><pre><span class="nc">ContentProvider</span><span class="o">.</span><span class="na">java</span>
+
+<span class="kd">private</span> <span class="nc">Transport</span> <span class="n">mTransport</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Transport</span><span class="o">();</span>
+
+<span class="o">...</span><span class="na">略</span>
+
+    <span class="cm">/**
+     * Binder object that deals with remoting.
+     *
+     * @hide
+     */</span>
+    <span class="kd">class</span> <span class="nc">Transport</span> <span class="kd">extends</span> <span class="nc">ContentProviderNative</span> <span class="o">{</span>
+
+</pre></table></code></div></div><p>Transport 继承自 <a href="https://android.googlesource.com/platform/frameworks/base.git/+/master/core/java/android/content/ContentProviderNative.java">ContentProviderNative</a>，而打开 ContentProviderNative 可以看到其继承 Binder 类、实现 IContentProvider 接口，可见是很典型的 Binder 通信模型代码：Transport 是实现 IContentProvider 接口的 Binder 对象，负责处理来自客户端的 Binder 请求以及作为Binder句柄发送给客户端使用。</p><p>打开 <a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/content/ContentProvider.java#227">Transport.query()</a>，可以看到先执行了权限检查等逻辑，然后调用 mInterface.query() ，即 ContentProvider 的 query() 、即应用程序的 query() 实现。</p><h2 id="content-provider-注册与获取">Content Provider 注册与获取</h2><h3 id="注册-cp">注册 CP</h3><p>PMS 中 的 PackageParser 的 parseProvider 解析 AndroidManifest 中的 CP，生成 ProviderInfo 供后续获使用</p><h3 id="获取-cp">获取 CP</h3><p>AMS 先初步检查权限（不含 AppOps），如果通过返回 Binder，CP 服务端所在进程的 ContentProvider.java 再二次根据接口类型做最终权限检查和 AppOps 检查。</p><p>详细见后文。</p><h2 id="静态-content--provider-权限">静态 Content Provider 权限</h2><p>可以对 Content Provider 整个（读写一起）配置权限，也可以细粒度地，对Content Provider读写分别配置权限（readPermission、writePermission），甚至针对 path 配置权限，当 Path 权限和 Global 权限同时存在时，前者<a href="https://developer.android.com/guide/topics/providers/content-provider-creating.html#implementing-permissions">优先于后者</a>。 <a href="https://developer.android.com/guide/topics/providers/content-provider-creating.html#Permissions">参考</a>。</p><p>此外，Android Framework 不同的 Content Provider 接口执行权限检查情况不同，有的会校验写权限（如 insert），有的会校验读权限，而有的则不校验任何权限，而 getType 是唯一的甚至允许 exported=false 时可被<a href="https://developer.android.com/reference/android/content/ContentProvider#getType(android.net.Uri)">外部调用</a> 的接口，列表如下：</p><div class="table-wrapper"><table><thead><tr><th style="text-align: center"> <th style="text-align: center">insert<th style="text-align: center">delete<th style="text-align: center">update<th>query<th>call<th style="text-align: center">getStreamTypes<th style="text-align: center">bulkInsert<th>getType<th style="text-align: center">openFile r<th style="text-align: center">opnFile w<tbody><tr><td style="text-align: center"><strong>readPermission</strong><td style="text-align: center">no<td style="text-align: center">no<td style="text-align: center">no<td>yes<td>no<td style="text-align: center">no<td style="text-align: center">no<td>no<td style="text-align: center">yes<td style="text-align: center">no<tr><td style="text-align: center"><strong>writePermission</strong><td style="text-align: center">yes<td style="text-align: center">yes<td style="text-align: center">yes<td>no<td>no<td style="text-align: center">no<td style="text-align: center">yes<td>no<td style="text-align: center">no<td style="text-align: center">yes</table></div><p>注意：除了 getType 外，上表中 read/write 权限都不需要的，并不意味着客户端就可以任意访问到，参见<a href="#part-1-ams-对-content-provider-调用的权限检查">Part 1. AMS 对 Content Provider 调用的权限检查</a>。</p><p>Content Provider 服务要实现只读，可以配置 writePermission 或相应接口实现时 <a href="https://developer.android.com/guide/topics/providers/content-provider-creating.html#ContentProvider">return 0</a></p><h2 id="动态-content-provider-权限">动态 Content Provider 权限</h2><p>根据 [Android 官方描述] (https://developer.android.com/training/articles/security-tips#ContentProviders)，如果应用想动态地授予外部应用 Content Provider 权限（即使该Content Provider 的 exported 属性为 false 或要求了应用不满足的权限），必须在 Provider 的 Manifest 中声明 android:grantUriPermissions 为 true 的属性，使所有 URI 都能够被动态授权，默认为 false；或者仅开放有限的 path 可被动态授权，做法是在其下增加 <grant-uri-permission></grant-uri-permission></p><div class="language-xml highlighter-rouge"><div class="code-header"> <span text-data=" XML "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nt">&lt;grant-uri-permission</span> <span class="na">android:path=</span><span class="s">"string"</span>
+                      <span class="na">android:pathPattern=</span><span class="s">"string"</span>
+                      <span class="na">android:pathPrefix=</span><span class="s">"string"</span> <span class="nt">/&gt;</span>
+</pre></table></code></div></div><p>注 1：Android 的 grantUriPermissions 特性要求基于一个 exported=false 的 Content Provider，exported=true 的 Content Provider 外界总是能访问。HMSCore 的 StubContentProvider exported = true，调用 Context().checkUriPermission 试图校验 CP 时，无论先前是否已 grant URI 权限，该接口总是返回<strong>有权限</strong>。</p><p>注 2：Android 应用框架会用 <a href="https://developer.android.com/reference/android/content/pm/ProviderInfo#uriPermissionPatterns">ProviderInfo#uriPermissionPatterns</a> 记录 Provider 允许动态授权的 URI 列表，不在此列表的 URI 无法被动态授权；应用可以通过 <a href="https://developer.android.com/reference/android/content/Context#checkUriPermission(android.net.Uri,%20java.lang.String,%20java.lang.String,%20int,%20int,%20int)">Context.checkUriPermission() </a> 查询调用者是否被动态授予了目标 URI 的权限。</p><p>这样一来，Content Provider 就可以通过：</p><ol><li><p>调用 <a href="https://developer.android.com/reference/android/content/Context#grantUriPermission(java.lang.String,%20android.net.Uri,%20int)">Context.grantPermission()</a> 授予外部应用（指定包名）某个 URI 的访问权限。对应的 revokeUriPermission() 来撤销某个 Uri 的全部访问权限或指定应用的访问权限</p><li><p>（实践中更常用）在发送给外部应用的 Intent 中设置 FLAG_GRANT_READ_URI_PERMISSION/FLAG_GRANT_WRITE_URI_PERMISSION 来授权某个 URI 的访问权限，比如邮件应用临时授予（通过 startActivityForResult）图片浏览应用访问自己的附件图片的权限。</p></ol><p>二者差别：</p><p>前者的授权可以通过参数（toPackage、uri、modeFlags）控制授权者包名、Uri、读写权限组合、授权<a href="https://developer.android.com/reference/android/content/Intent#FLAG_GRANT_PERSISTABLE_URI_PERMISSION">是否持久化</a>等（默认情况下手机重启或手动 revoke 就会使授权失效）； 后者则仅在接收授权的应用的任务栈（task）存续期间存在，一旦 task 销毁，授权也会自动失效，此时 Content Provider 不需要再手动 revoke。</p><p>上述权限机制的实现在 ActivityManangerService 里面，其中持久化授权记录在 /data/system/urigrants.xml 文件中; 持久化授权还需要被授权者真实存在，因此要求接收授权者调用 ContentResolver#takePersistableUriPermission(Uri, int) 使持久化授权真实生效。</p><p>详细参考：</p><ul><li><a href="https://developer.android.com/guide/topics/providers/content-provider-basics#getting-access-with-temporary-permissions">Content provider basics</a><li><a href="https://books.google.co.jp/books?id=-QcvDwAAQBAJ&amp;pg=PA48&amp;lpg=PA48&amp;dq=grantUriPermissions+security&amp;source=bl&amp;ots=L9hsYT45tA&amp;sig=ACfU3U0U5uPcwwwgaR-GbGFOj_qmtABQmA&amp;hl=zh-CN&amp;sa=X&amp;ved=2ahUKEwiDnY_Wiv7oAhUxNKYKHc37DMEQ6AEwAnoECAgQAQ#v=onepage&amp;q=grantUriPermissions%20security&amp;f=false">Android Security Internals: An In-Depth Guide to Android’s Security Architecture</a></ul><h2 id="contet-provider-权限检查的实现">Contet Provider 权限检查的实现</h2><ul><li>客户端： ContentResolver、ContextImpl.java、 ActivityThread.java<li>AMS：ActivityManagerService.java、ActivityManager.java<li>服务端：ContentProvider.java</ul><p>Content Provider 的权限校验实现分为两部分，第一部分是 AMS 实现的</p><h3 id="part-1-ams-对-content-provider-调用的权限检查">Part 1. AMS 对 Content Provider 调用的权限检查</h3><p>服务端注册调用 AMS.publishContentProviders() 接口注册 CP，使得客户端应用能够通过 CP 名称查询获取到 CP。该接口除了使用 enforceNotIsolatedCaller() 限制沙箱应用调用外（很多接口都有这一限制），没有额外的权限限制，。</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre><td class="rouge-code"><pre>    <span class="cm">/* package */</span> <span class="kt">void</span> <span class="nf">enforceNotIsolatedCaller</span><span class="o">(</span><span class="nc">String</span> <span class="n">caller</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">UserHandle</span><span class="o">.</span><span class="na">isIsolated</span><span class="o">(</span><span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingUid</span><span class="o">()))</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">SecurityException</span><span class="o">(</span><span class="s">"Isolated process not allowed to call "</span> <span class="o">+</span> <span class="n">caller</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+</pre></table></code></div></div><p>客户端查询 Conent Provider 时（调用 acquireProvider、…、AMS.getContentProvider） AMS 会调用 PMS 的接口，综合服务端 CP 声明的权限、客户端的权限、服务端 CP exported 情况决定是否返回服务端的 Binder 句柄。具体实现在 AMS.getContentProviderImpl() 中调用 <a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/services/core/java/com/android/server/am/ActivityManagerService.java#6837">checkContentProviderPermissionLocked</a></p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+</pre><td class="rouge-code"><pre>    <span class="cm">/**
+     * Check if {@link ProcessRecord} has a possible chance at accessing the
+     * given {@link ProviderInfo}. Final permission checking is always done
+     * in {@link ContentProvider}.
+     */</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="nf">checkContentProviderPermissionLocked</span><span class="o">(</span>
+            <span class="nc">ProviderInfo</span> <span class="n">cpi</span><span class="o">,</span> <span class="nc">ProcessRecord</span> <span class="n">r</span><span class="o">,</span> <span class="kt">int</span> <span class="n">userId</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">checkUser</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// cpi 是服务端 provider 的信息</span>
+        <span class="kd">final</span> <span class="kt">int</span> <span class="n">callingPid</span> <span class="o">=</span> <span class="o">(</span><span class="n">r</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">?</span> <span class="n">r</span><span class="o">.</span><span class="na">pid</span> <span class="o">:</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingPid</span><span class="o">();</span>
+        <span class="kd">final</span> <span class="kt">int</span> <span class="n">callingUid</span> <span class="o">=</span> <span class="o">(</span><span class="n">r</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">?</span> <span class="n">r</span><span class="o">.</span><span class="na">uid</span> <span class="o">:</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingUid</span><span class="o">();</span>
+        <span class="kt">boolean</span> <span class="n">checkedGrants</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">checkUser</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// Looking for cross-user grants before enforcing the typical cross-users permissions</span>
+            <span class="kt">int</span> <span class="n">tmpTargetUserId</span> <span class="o">=</span> <span class="n">mUserController</span><span class="o">.</span><span class="na">unsafeConvertIncomingUser</span><span class="o">(</span><span class="n">userId</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">tmpTargetUserId</span> <span class="o">!=</span> <span class="nc">UserHandle</span><span class="o">.</span><span class="na">getUserId</span><span class="o">(</span><span class="n">callingUid</span><span class="o">))</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">mUgmInternal</span><span class="o">.</span><span class="na">checkAuthorityGrants</span><span class="o">(</span>
+                        <span class="n">callingUid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">,</span> <span class="n">tmpTargetUserId</span><span class="o">,</span> <span class="n">checkUser</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="o">}</span>
+                <span class="n">checkedGrants</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+            <span class="o">}</span>
+            <span class="n">userId</span> <span class="o">=</span> <span class="n">mUserController</span><span class="o">.</span><span class="na">handleIncomingUser</span><span class="o">(</span><span class="n">callingPid</span><span class="o">,</span> <span class="n">callingUid</span><span class="o">,</span> <span class="n">userId</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span>
+                    <span class="no">ALLOW_NON_FULL</span><span class="o">,</span> <span class="s">"checkContentProviderPermissionLocked "</span> <span class="o">+</span> <span class="n">cpi</span><span class="o">.</span><span class="na">authority</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">userId</span> <span class="o">!=</span> <span class="n">tmpTargetUserId</span><span class="o">)</span> <span class="o">{</span>
+                <span class="c1">// When we actually went to determine the final targer user ID, this ended</span>
+                <span class="c1">// up different than our initial check for the authority.  This is because</span>
+                <span class="c1">// they had asked for USER_CURRENT_OR_SELF and we ended up switching to</span>
+                <span class="c1">// SELF.  So we need to re-check the grants again.</span>
+                <span class="n">checkedGrants</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="c1">// 第一次机会，检查组件级别权限</span>
+        <span class="c1">// 如果组件的 r/w 任意一个权限显式满足或任意一个为 null，就代表客户端有机会访问服务端，返回成功。否则，看下 path 权限有没有机会。</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">checkComponentPermission</span><span class="o">(</span><span class="n">cpi</span><span class="o">.</span><span class="na">readPermission</span><span class="o">,</span> <span class="n">callingPid</span><span class="o">,</span> <span class="n">callingUid</span><span class="o">,</span>
+                <span class="n">cpi</span><span class="o">.</span><span class="na">applicationInfo</span><span class="o">.</span><span class="na">uid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">.</span><span class="na">exported</span><span class="o">)</span>
+                <span class="o">==</span> <span class="nc">PackageManager</span><span class="o">.</span><span class="na">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">checkComponentPermission</span><span class="o">(</span><span class="n">cpi</span><span class="o">.</span><span class="na">writePermission</span><span class="o">,</span> <span class="n">callingPid</span><span class="o">,</span> <span class="n">callingUid</span><span class="o">,</span>
+                <span class="n">cpi</span><span class="o">.</span><span class="na">applicationInfo</span><span class="o">.</span><span class="na">uid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">.</span><span class="na">exported</span><span class="o">)</span>
+                <span class="o">==</span> <span class="nc">PackageManager</span><span class="o">.</span><span class="na">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// 第二次机会，path 权限</span>
+        <span class="nc">PathPermission</span><span class="o">[]</span> <span class="n">pps</span> <span class="o">=</span> <span class="n">cpi</span><span class="o">.</span><span class="na">pathPermissions</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">pps</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">pps</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+            <span class="c1">// 将所有 path 的 readPermission  writePermission 权限都检查一遍，只要有任意一个权限显式满足（且 path 权限非 null），则返回成功。否则下一步。这里 path 权限为 null 时，并不视为「机会」，当组件权限显式拒绝时，这才是合理的。</span>
+            <span class="k">while</span> <span class="o">(</span><span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">i</span><span class="o">--;</span>
+                <span class="nc">PathPermission</span> <span class="n">pp</span> <span class="o">=</span> <span class="n">pps</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+                <span class="nc">String</span> <span class="n">pprperm</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="na">getReadPermission</span><span class="o">();</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">pprperm</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">checkComponentPermission</span><span class="o">(</span><span class="n">pprperm</span><span class="o">,</span> <span class="n">callingPid</span><span class="o">,</span> <span class="n">callingUid</span><span class="o">,</span>
+                        <span class="n">cpi</span><span class="o">.</span><span class="na">applicationInfo</span><span class="o">.</span><span class="na">uid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">.</span><span class="na">exported</span><span class="o">)</span>
+                        <span class="o">==</span> <span class="nc">PackageManager</span><span class="o">.</span><span class="na">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="o">}</span>
+                <span class="nc">String</span> <span class="n">ppwperm</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="na">getWritePermission</span><span class="o">();</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">ppwperm</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">checkComponentPermission</span><span class="o">(</span><span class="n">ppwperm</span><span class="o">,</span> <span class="n">callingPid</span><span class="o">,</span> <span class="n">callingUid</span><span class="o">,</span>
+                        <span class="n">cpi</span><span class="o">.</span><span class="na">applicationInfo</span><span class="o">.</span><span class="na">uid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">.</span><span class="na">exported</span><span class="o">)</span>
+                        <span class="o">==</span> <span class="nc">PackageManager</span><span class="o">.</span><span class="na">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="c1">// 最后一个机会：检查 grant uri，看该客户端是否被服务端 grant uri 过</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">checkedGrants</span>
+                <span class="o">&amp;&amp;</span> <span class="n">mUgmInternal</span><span class="o">.</span><span class="na">checkAuthorityGrants</span><span class="o">(</span><span class="n">callingUid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">,</span> <span class="n">userId</span><span class="o">,</span> <span class="n">checkUser</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="kd">final</span> <span class="nc">String</span> <span class="n">suffix</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">cpi</span><span class="o">.</span><span class="na">exported</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s">" that is not exported from UID "</span> <span class="o">+</span> <span class="n">cpi</span><span class="o">.</span><span class="na">applicationInfo</span><span class="o">.</span><span class="na">uid</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">android</span><span class="o">.</span><span class="na">Manifest</span><span class="o">.</span><span class="na">permission</span><span class="o">.</span><span class="na">MANAGE_DOCUMENTS</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">cpi</span><span class="o">.</span><span class="na">readPermission</span><span class="o">))</span> <span class="o">{</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s">" requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s">" requires "</span> <span class="o">+</span> <span class="n">cpi</span><span class="o">.</span><span class="na">readPermission</span> <span class="o">+</span> <span class="s">" or "</span> <span class="o">+</span> <span class="n">cpi</span><span class="o">.</span><span class="na">writePermission</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="kd">final</span> <span class="nc">String</span> <span class="n">msg</span> <span class="o">=</span> <span class="s">"Permission Denial: opening provider "</span> <span class="o">+</span> <span class="n">cpi</span><span class="o">.</span><span class="na">name</span>
+                <span class="o">+</span> <span class="s">" from "</span> <span class="o">+</span> <span class="o">(</span><span class="n">r</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">r</span> <span class="o">:</span> <span class="s">"(null)"</span><span class="o">)</span> <span class="o">+</span> <span class="s">" (pid="</span> <span class="o">+</span> <span class="n">callingPid</span>
+                <span class="o">+</span> <span class="s">", uid="</span> <span class="o">+</span> <span class="n">callingUid</span> <span class="o">+</span> <span class="s">")"</span> <span class="o">+</span> <span class="n">suffix</span><span class="o">;</span>
+        <span class="nc">Slog</span><span class="o">.</span><span class="na">w</span><span class="o">(</span><span class="no">TAG</span><span class="o">,</span> <span class="n">msg</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">msg</span><span class="o">;</span>
+    <span class="o">}</span>
+</pre></table></code></div></div><p>其中入参 permission 是目标组件声明的权限，owningUid 是目标组件应用的 UID， exported 是目标组件的暴露情况，uid 是调用者的 UID。这里和 AMS/PMS 所有权限检查代码一样，只检查传统权限模型中的 Permission，而不检查 <strong>App Ops</strong>。checkContentProviderPermissionLocked 的逻辑总的来说是：只要调用者有任何访问 CP 的机会就返回成功，允许将服务端的 Binder 发送给客户端（正如方法开头的注释所说，当然服务端还有下半场权限检查），具体来说：</p><ol><li><p>默认无访问权限，依次检查下列权限规则，当任意「机会」存在时返回权限检查成功（意味着 AMS 将返回 CP 服务端的 Binder 给到客户端应用）</p><li><p>检查跨（多）用户的权限，这里省略。</p><li><p>服务端组件并不要求权限或客户端显式具有服务端 ContentProvider 组件维度声明的权限，视为有「机会」。否则下一步。</p><p><strong>如果组件的 r/w 任意一个权限显式满足或任意一个为 null，就代表客户端有机会访问服务端，返回成功。—— 类比于一套房子的若干大门，和内部的房间门，当任意大门是开的（权限 null 或者显式满足），一定是有机会进入房子</strong></p><p>分别调用 checkComponentPermission()，先后检查客户端是否具有服务端件声明的 <code class="language-plaintext highlighter-rouge">readPermission</code> 和 <code class="language-plaintext highlighter-rouge">writePermission</code> 权限，检查客户端是否 PERMISSION_GRANTED。</p><p>注意：这里 AMS 对组件级的权限检查并不直接检查 ContentProvider 清单文件中声明的 <code class="language-plaintext highlighter-rouge">permission</code> 属性 (整体权限)。实际上，AMS 内记录实例权限信息的 ProviderInfo 类也不存在对应于清单中 <code class="language-plaintext highlighter-rouge">permission</code> 属性的字段，这是因为 <a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/pm/PackageParser.java#5065">PackageParser.parseProvider()</a> 解析 ContentProvider 组件时，权限信息会拍扁为 ProviderInfo.readPermission 和 ProviderInfo.readPermission，其取值遵循清单文件中 ContentProvider r/w 权限优先于组件权限的原则：当清单中 r、w 非空时，取 r、w 的值；当 r 或 w 为空无法取到值时，对应地以 permission 的值为准（包括空，即最终取值 null）。参考文档 <a href="https://developer.android.com/guide/topics/manifest/provider-element#prmsn">provider-element</a></p><p>checkComponentPermission 的实现在 <a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/app/ActivityManager.java#4213">ActivityManager.checkComponentPermission()</a> ，会检查 exported 和权限拥有情况（其中权权限检查是调用 PMS 的接口）。当 exported = false 时直接返回失败，exported = true 时才检查权限，并且如下代码可以验证：当服务端声明的权限为 null 时返回 PERMISSION_GRANTED，即无权限保护时即可访问 ContentProvider（准确说还只是获取 Binder 句柄）。</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre> <span class="k">if</span> <span class="o">(</span><span class="n">permission</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span> <span class="c1">//服务端权限，这边是 readPermission 或 writePermission</span>
+     <span class="k">return</span> <span class="nc">PackageManager</span><span class="o">.</span><span class="na">PERMISSION_GRANTED</span><span class="o">;</span>
+ <span class="o">}</span>
+</pre></table></code></div></div><li><p>客户端显式具有服务端 pathPermissions 声明的权限的集合中任意一个，则视为有「机会」。—— 虽然大门是紧闭的，但只要有开窗，还是有机会进入房子，当然空 path 权限等价于没有窗户。</p><p>组件粒度权限检查失败，开始检查 pathPermission。pathPermission 是针对单个 path 设置的权限，但 AMS 的检查并不看具体的 URI ，只要客户端具有任意一个权限即可（针对 URI 的检查，放在 ContentProvider.java）。还是使用 checkComponentPermission ，因此检查结果仍然包含 exported 属性。如果检查成功则返回成功，否则下一步。</p><p>注意：到这一步，空 pathpermission 不能像空组件权限一样视为机会了。</p><li><p>检查 grant uri，看该客户端是否被服务端 grant uri 过，如果满足，则给最后一次「机会」。</p><p>pathPermissions 也检查失败，还有机会，检查客户端是否被服务端 grant uri 过，只要 grant 过即返回成功，不管是什么 URI。</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre> <span class="k">if</span> <span class="o">(!</span><span class="n">checkedGrants</span>
+          <span class="o">&amp;&amp;</span> <span class="n">mUgmInternal</span><span class="o">.</span><span class="na">checkAuthorityGrants</span><span class="o">(</span><span class="n">callingUid</span><span class="o">,</span> <span class="n">cpi</span><span class="o">,</span> <span class="n">userId</span><span class="o">,</span> <span class="n">checkUser</span><span class="o">))</span> <span class="o">{</span>
+     <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+ <span class="o">}</span>
+</pre></table></code></div></div></ol><p>逻辑是：检查 callingUid 所有的 granted 权限的 URI 中，是否有任意一个 URI 其 content provider Authority（通过 uri.getAuthority() 获取） 能匹配目标 content provider，如果匹配说明这个 callingUid 被目标 cp grant 过。如果匹配则返回成功。否则下一步（到这里就是失败了）。这里也是为什么 exported 为 false 的 cp 认然有机会被访问的原因。</p><p>上述权限检查逻辑似乎哪里不对：Content Provider 不同接口权限要求是不一样的，比如 query 和 insert 一个是要求符合 readPermission，而 insert 则是 writePermission，而且也没有针对具体的 URI 做区分。</p><p>原来这里 AMS 只是决定 Binder 句柄是否返回给客户端，只是表示客户端可能具有权限，客户端获取到 Binder 句柄建立通信后，在服务端进程运行的 Android 应用框架 ContentProvider 类还会执行决定性的权限检查。对于任何一个权限都不具有不沾边的，就直接拒绝了。在一开始的注释也有说明。</p><h3 id="part2-contentproviderjava-对调用的检查">part2. ContentProvider.java 对调用的检查</h3><p>ContentProvider.java 是运行在服务端应用程序的应用框架类，通过 part1 的权限检查后，客户端会得到建立通信的 Binder 句柄，而 ContentProvider.java 这里会执行最终的权限检查。</p><p>和 part1 相比，权限检查很相似。但一个<strong>大差别</strong>是 AMS 是更宽松的，当组件级权限是空的情况直接允许（这条件返回 CP Binder 给客户端没毛病），而 ContentProvider.java 则严格，当组件级权限为空，path 权限也要为空这才 OK。</p><h4 id="不同接口不同权限检查要求">不同接口不同权限检查要求</h4><p>参考 <a href="#content-provider-通信模型">Content Provider 通信机制</a>，这部分权限检查是由 ContentProvider 内部持有的 Binder 接口实现类（Transport）中执行的，只有 Transport 执行权限校验后才会调用服务端实现的 ContentProvider 业务抽象方法（query、delete等等）。而 readPermission/writePermission/pathPermission 权限执行在不同的 ContentProvider 业务方法中不同。举例来说：</p><ul><li><a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/ContentProvider.java#239">Transport.query()</a></ul><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre><td class="rouge-code"><pre> <span class="k">if</span> <span class="o">(</span><span class="n">enforceReadPermission</span><span class="o">(</span><span class="n">callingPkg</span><span class="o">,</span> <span class="n">uri</span><span class="o">,</span> <span class="kc">null</span><span class="o">)</span> <span class="o">!=</span> <span class="nc">AppOpsManager</span><span class="o">.</span><span class="na">MODE_ALLOWED</span><span class="o">)</span> <span class="o">{</span>
+</pre></table></code></div></div><p>说明 query() 会校验读权限。</p><ul><li><a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/ContentProvider.java#322">Transport.insert</a></ul><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre><td class="rouge-code"><pre><span class="k">if</span> <span class="o">(</span><span class="n">enforceWritePermission</span><span class="o">(</span><span class="n">callingPkg</span><span class="o">,</span> <span class="n">uri</span><span class="o">,</span> <span class="kc">null</span><span class="o">)</span> <span class="o">!=</span> <span class="nc">AppOpsManager</span><span class="o">.</span><span class="na">MODE_ALLOWED</span><span class="o">)</span> <span class="o">{</span>
+</pre></table></code></div></div><p>而 insert() 会校验写权限。</p><ul><li><a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/core/java/android/content/ContentProvider.java#290">getType</a></ul><p>getType 不会校验权限。</p><p>拓展：实际上 getType() 不仅不会执行权限校验，而且服务端组件 exported=false 时仍能被外部调用，这是因为 AMS 特别地开了小门，单独对 getProviderMimeType 进行了实现： <a href="https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r25/services/core/java/com/android/server/am/ActivityManagerService.java#8007">getProviderMimeType</a></p><p>完整方法对应的权限要求参见后表。</p><h4 id="权限检查接口实现">权限检查接口实现</h4><p>enforceReadPermission/enforceWritePermission() 的主要实现在 enforceReadPermissionInner()/enforceWritePermissionInner()</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+</pre><td class="rouge-code"><pre><span class="nc">ContentProvider</span><span class="o">.</span><span class="na">java</span>
+
+    <span class="kd">protected</span> <span class="kt">int</span> <span class="nf">enforceWritePermissionInner</span><span class="o">(</span><span class="nc">Uri</span> <span class="n">uri</span><span class="o">,</span> <span class="nc">String</span> <span class="n">callingPkg</span><span class="o">,</span> <span class="nc">IBinder</span> <span class="n">callerToken</span><span class="o">)</span>
+            <span class="kd">throws</span> <span class="nc">SecurityException</span> <span class="o">{</span>
+        <span class="kd">final</span> <span class="nc">Context</span> <span class="n">context</span> <span class="o">=</span> <span class="n">getContext</span><span class="o">();</span>
+        <span class="kd">final</span> <span class="kt">int</span> <span class="n">pid</span> <span class="o">=</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingPid</span><span class="o">();</span>
+        <span class="kd">final</span> <span class="kt">int</span> <span class="n">uid</span> <span class="o">=</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingUid</span><span class="o">();</span>
+        <span class="nc">String</span> <span class="n">missingPerm</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="kt">int</span> <span class="n">strongestMode</span> <span class="o">=</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">UserHandle</span><span class="o">.</span><span class="na">isSameApp</span><span class="o">(</span><span class="n">uid</span><span class="o">,</span> <span class="n">mMyUid</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// 如果 exported=true，好，来看看权限有满足的情况不。</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">mExported</span> <span class="o">&amp;&amp;</span> <span class="n">checkUser</span><span class="o">(</span><span class="n">pid</span><span class="o">,</span> <span class="n">uid</span><span class="o">,</span> <span class="n">context</span><span class="o">))</span> <span class="o">{</span>
+            <span class="kd">final</span> <span class="nc">String</span> <span class="n">componentPerm</span> <span class="o">=</span> <span class="n">getWritePermission</span><span class="o">();</span>
+            <span class="c1">// 权限显式满足（非空且客户端匹配权限），ALLOW！,否则再看看 path 权限，有没有机会。</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">componentPerm</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="kd">final</span> <span class="kt">int</span> <span class="n">mode</span> <span class="o">=</span> <span class="n">checkPermissionAndAppOp</span><span class="o">(</span><span class="n">componentPerm</span><span class="o">,</span> <span class="n">callingPkg</span><span class="o">,</span> <span class="n">callerToken</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">mode</span> <span class="o">==</span> <span class="no">MODE_ALLOWED</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="k">return</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                    <span class="n">missingPerm</span> <span class="o">=</span> <span class="n">componentPerm</span><span class="o">;</span>
+                    <span class="n">strongestMode</span> <span class="o">=</span> <span class="nc">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">strongestMode</span><span class="o">,</span> <span class="n">mode</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="c1">// path 权限显式满足，ALLOW！；</span>
+            <span class="c1">// path 权限为空，且组件权限也为空，说明 CP 没有安全要求，ALLOW！。否则再看看动态 URI 权限有没有权限。</span>
+            <span class="c1">// track if unprotected write is allowed; any denied</span>
+            <span class="c1">// &lt;path-permission&gt; below removes this ability</span>
+            <span class="kt">boolean</span> <span class="n">allowDefaultWrite</span> <span class="o">=</span> <span class="o">(</span><span class="n">componentPerm</span> <span class="o">==</span> <span class="kc">null</span><span class="o">);</span>
+            <span class="kd">final</span> <span class="nc">PathPermission</span><span class="o">[]</span> <span class="n">pps</span> <span class="o">=</span> <span class="n">getPathPermissions</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">pps</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="kd">final</span> <span class="nc">String</span> <span class="n">path</span> <span class="o">=</span> <span class="n">uri</span><span class="o">.</span><span class="na">getPath</span><span class="o">();</span>
+                <span class="k">for</span> <span class="o">(</span><span class="nc">PathPermission</span> <span class="n">pp</span> <span class="o">:</span> <span class="n">pps</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="kd">final</span> <span class="nc">String</span> <span class="n">pathPerm</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="na">getWritePermission</span><span class="o">();</span>
+                    <span class="k">if</span> <span class="o">(</span><span class="n">pathPerm</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">pp</span><span class="o">.</span><span class="na">match</span><span class="o">(</span><span class="n">path</span><span class="o">))</span> <span class="o">{</span>
+                        <span class="kd">final</span> <span class="kt">int</span> <span class="n">mode</span> <span class="o">=</span> <span class="n">checkPermissionAndAppOp</span><span class="o">(</span><span class="n">pathPerm</span><span class="o">,</span> <span class="n">callingPkg</span><span class="o">,</span> <span class="n">callerToken</span><span class="o">);</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">mode</span> <span class="o">==</span> <span class="no">MODE_ALLOWED</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="k">return</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+                        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                            <span class="c1">// any denied &lt;path-permission&gt; means we lose</span>
+                            <span class="c1">// default &lt;provider&gt; access.</span>
+                            <span class="n">allowDefaultWrite</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+                            <span class="n">missingPerm</span> <span class="o">=</span> <span class="n">pathPerm</span><span class="o">;</span>
+                            <span class="n">strongestMode</span> <span class="o">=</span> <span class="nc">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">strongestMode</span><span class="o">,</span> <span class="n">mode</span><span class="o">);</span>
+                        <span class="o">}</span>
+                    <span class="o">}</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="c1">// if we passed &lt;path-permission&gt; checks above, and no default</span>
+            <span class="c1">// &lt;provider&gt; permission, then allow access.</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">allowDefaultWrite</span><span class="o">)</span> <span class="k">return</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// exported 为 false？没关系，最后一次机会，动态 URI 授权。</span>
+        <span class="c1">// last chance, check against any uri grants</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="na">checkUriPermission</span><span class="o">(</span><span class="n">uri</span><span class="o">,</span> <span class="n">pid</span><span class="o">,</span> <span class="n">uid</span><span class="o">,</span> <span class="nc">Intent</span><span class="o">.</span><span class="na">FLAG_GRANT_WRITE_URI_PERMISSION</span><span class="o">,</span>
+                <span class="n">callerToken</span><span class="o">)</span> <span class="o">==</span> <span class="no">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="no">MODE_ALLOWED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// If the worst denial we found above was ignored, then pass that</span>
+        <span class="c1">// ignored through; otherwise we assume it should be a real error below.</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">strongestMode</span> <span class="o">==</span> <span class="no">MODE_IGNORED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="no">MODE_IGNORED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="kd">final</span> <span class="nc">String</span> <span class="n">failReason</span> <span class="o">=</span> <span class="n">mExported</span>
+                <span class="o">?</span> <span class="s">" requires "</span> <span class="o">+</span> <span class="n">missingPerm</span> <span class="o">+</span> <span class="s">", or grantUriPermission()"</span>
+                <span class="o">:</span> <span class="s">" requires the provider be exported, or grantUriPermission()"</span><span class="o">;</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">SecurityException</span><span class="o">(</span><span class="s">"Permission Denial: writing "</span>
+                <span class="o">+</span> <span class="nc">ContentProvider</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getName</span><span class="o">()</span> <span class="o">+</span> <span class="s">" uri "</span> <span class="o">+</span> <span class="n">uri</span> <span class="o">+</span> <span class="s">" from pid="</span> <span class="o">+</span> <span class="n">pid</span>
+                <span class="o">+</span> <span class="s">", uid="</span> <span class="o">+</span> <span class="n">uid</span> <span class="o">+</span> <span class="n">failReason</span><span class="o">);</span>
+    <span class="o">}</span>
+</pre></table></code></div></div><p>对于每个客户端的请求，StubContentProvider 都会做权限和 AppOps 检查，检查失败时要拒绝访问。检查遵照如下逻辑：</p><ol><li><p>默认禁止调用者访问（权限检查是失败），但调用者有以下若干机会获得允许。按顺序排查，当某当任意条件检查显示客户端具有权限时返回检查成功。</p><li><p>检查请求是否来自同一个 UID，如果相同<strong>检查成功</strong>。</p><li><p>检查组件是否对外暴露（ exported 属性），如果对外暴露，执行下一步的权限以及关联的 AppOps 检查，如果不对外暴露进入 5 的检查：</p><li><p>根据接口类型检查调用者是否满足目标组件声明的 readPermission 或 writePermission 权限，同时检查权限关联的 AppOps，只有权限显式满足（权限非空且调用者满足要求）才<strong>检查成功</strong>。否则执行下一步的 Path 权限检查。</p><p>注：这和文档中 <a href="https://developer.android.com/guide/topics/providers/content-provider-creating.html#implementing-permissions">Path优先于组件</a>（「Also, path-level permission takes precedence over provider-level permissions.」） 描述有所差异（解释：这句话的意思应该是如果 provider 组件 level 的权限是不满足时，path 权限此时才优先生效），<strong>如果 provider 组件级的权限已经满足，就不再检查 path 权限</strong></p><li><p>查询调用者要访问的 URI 对应匹配的目标组件 Path，检查其声明的 readPermission 或 writePermission 权限以及权限关联的 AppOps：如果匹配的 Path 声明了指定的权限，调用者显式满足权限声明要求，返回<strong>检查成功</strong>如果 URI 没有匹配任何 Path 或匹配但 Path 声明的权限为空，并且第 3 步组件级权限也为空，这说明目标 CP 是无任何权限限制的公开组件，此时也返回<strong>检查成功</strong>。否则进入下一步检查，看看还有没有机会。</p><li><p>到现在还是不通过？没关系，还有最后一次机会，检查调用者是否被动态授予了目标 URI 权限</p><p>注：当 URI 对应的 ContentProvider exported = true 时 Context.checkUriPermission 方法始终返回 true。</p></ol><p>从代码看前两步时调用 checkPermissionAndAppOp 来实现的，展开分析这个方法：</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+</pre><td class="rouge-code"><pre>    <span class="cm">/**
+     * Verify that calling app holds both the given permission and any app-op
+     * associated with that permission.
+     */</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="nf">checkPermissionAndAppOp</span><span class="o">(</span><span class="nc">String</span> <span class="n">permission</span><span class="o">,</span> <span class="nc">String</span> <span class="n">callingPkg</span><span class="o">,</span>
+            <span class="nc">IBinder</span> <span class="n">callerToken</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">getContext</span><span class="o">().</span><span class="na">checkPermission</span><span class="o">(</span><span class="n">permission</span><span class="o">,</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingPid</span><span class="o">(),</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingUid</span><span class="o">(),</span>
+                <span class="n">callerToken</span><span class="o">)</span> <span class="o">!=</span> <span class="no">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="no">MODE_ERRORED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">mTransport</span><span class="o">.</span><span class="na">noteProxyOp</span><span class="o">(</span><span class="n">callingPkg</span><span class="o">,</span> <span class="nc">AppOpsManager</span><span class="o">.</span><span class="na">permissionToOpCode</span><span class="o">(</span><span class="n">permission</span><span class="o">));</span>
+    <span class="o">}</span>
+</pre></table></code></div></div><p>观察 checkPermissionAndAppOp 方法，可以发现分别调用 Context.checkPermission() 和 AppOpsManager.noteProxyOp()，并要求二者同时满足要求。（由此应证，Context.checkPermission 只检查 permission 而不检查 AppOps）</p><div class="language-java highlighter-rouge"><div class="code-header"> <span text-data=" Java "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+</pre><td class="rouge-code"><pre>    <span class="cm">/**
+     * Verify that calling app holds both the given permission and any app-op
+     * associated with that permission.
+     */</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="nf">checkPermissionAndAppOp</span><span class="o">(</span><span class="nc">String</span> <span class="n">permission</span><span class="o">,</span> <span class="nc">String</span> <span class="n">callingPkg</span><span class="o">,</span>
+            <span class="nc">IBinder</span> <span class="n">callerToken</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">getContext</span><span class="o">().</span><span class="na">checkPermission</span><span class="o">(</span><span class="n">permission</span><span class="o">,</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingPid</span><span class="o">(),</span> <span class="nc">Binder</span><span class="o">.</span><span class="na">getCallingUid</span><span class="o">(),</span>
+                <span class="n">callerToken</span><span class="o">)</span> <span class="o">!=</span> <span class="no">PERMISSION_GRANTED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="no">MODE_ERRORED</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">mTransport</span><span class="o">.</span><span class="na">noteProxyOp</span><span class="o">(</span><span class="n">callingPkg</span><span class="o">,</span> <span class="nc">AppOpsManager</span><span class="o">.</span><span class="na">permissionToOpCode</span><span class="o">(</span><span class="n">permission</span><span class="o">));</span>
+    <span class="o">}</span>
+</pre></table></code></div></div><p>Context.checkPermission() 这里不细说，就是进入 AMS/PMS 来执行传统的「权限」检查。重点说下 noteProxyOp()。</p><p>noteProxyOp 的最终实现在 <a href="https://android.googlesource.com/platform/frameworks/base/+/refs/heads/master/services/core/java/com/android/server/appop/AppOpsService.java">AppOpsService.java</a>，AppOpsService 是运行在 system_server 中的一个系统服务，noteProxy() 会检查 permission 关联的 op 是否被允许。这里 ContentProvider 调用的是 noteProxyOp() 而不是 noteOp()，因此要求 proxy 方（Content Provider 提供方）和 proxied 方（Content Provider 调用方）方同时满足 op 要求。详细内容参考 AppOpsService。</p><p>注：exported 的默认值，API 17 即以后是 true，在此之前是没有这个属性的，所以默认行为等价于是 true。<a href="https://developer.android.com/guide/topics/manifest/provider-element">参见</a></p><h2 id="authorities">authorities</h2><p>在清单文件 Content Provider 元素中类名（name）仅标识实现类，而 authorities 才是唯一标识（因此，不同应用定义相同 authorities 会导致冲突，而无法安装）。实现类通过 <a href="https://developer.android.com/guide/topics/providers/content-provider-creating#content-uri-patterns">addURI</a> 方法向指定 authorities 添加 path （组合形成 URI）和对应处理代码、或 FileProvider 的 <a href="https://developer.android.com/reference/androidx/core/content/FileProvider#getUriForFile(android.content.Context,%20java.lang.String,%20java.io.File)">getUriForFile</a> 来向指定 authorities 添加 URI （文件资源）</p></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/categories/android/'>Android</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=深入探究 Android Content Provider 安全 - Hongbo Lin&url=https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=深入探究 Android Content Provider 安全 - Hongbo Lin&u=https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://telegram.me/share?text=深入探究 Android Content Provider 安全 - Hongbo Lin&url=https://linhongbo.com/posts/dive-into-android-content-provider-security-implementation/" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted topbar-down"><div class="access"><div id="access-lastmod" class="post"> <span>Recent Update</span><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/posts/aosp-repo-guide/">使用 Repo 下载 AOSP 源代码</a><li><a href="/posts/shadowsocks-on-openwrt/">OpenWrt Shadowsocks 安装&配置指南</a><li><a href="/posts/how-to-use-clash-on-openwrt/">OpenWrt 下安装和使用 Clash (ShellCrash)</a><li><a href="/posts/openwrt-usual-configuration/">OpenWrt 常用网络配置</a><li><a href="/posts/shadowsocks-server-on-openwrt/">OpenWrt 安装 Shadowsocks Server</a></ul></div><div id="access-tags"> <span>Trending Tags</span><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/openwrt/">OpenWrt</a> <a class="post-tag" href="/tags/shadowsocks/">Shadowsocks</a> <a class="post-tag" href="/tags/nas/">NAS</a> <a class="post-tag" href="/tags/dexguard/">DexGuard</a> <a class="post-tag" href="/tags/apache/">Apache</a> <a class="post-tag" href="/tags/chromium/">Chromium</a> <a class="post-tag" href="/tags/clash/">Clash</a> <a class="post-tag" href="/tags/compiler/">Compiler</a> <a class="post-tag" href="/tags/ddns/">DDNS</a> <a class="post-tag" href="/tags/esxi/">ESXi</a></div></div></div><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"> <span class="pl-3 pt-2 mb-2">Contents</span><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div class="col-12 col-lg-11 col-xl-8"><div id="post-extend-wrapper" class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><div id="related-posts" class="mt-5 mb-2 mb-sm-4"><h3 class="pt-2 mt-1 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/posts/app-ops/"><div class="card-body"> <span class="timeago small" >Aug 26, 2020<i class="unloaded">2020-08-26T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>理解 App Ops</h3><div class="text-muted small"><p> 概述 根据 Google 的文档，从 Android 4.3 开始，Android 应用框架引入了 App Ops。 App Ops 涵盖了广泛的功能，被用于访问控制和跟踪，帮助运行时权限访问控制和跟踪到电池消耗。也就是说 App Ops 也被用于安全用途，具体而言：新的权限模型由传统 permission 和 App Ops 共同组成，一些权限会额外关联 op，例如 android.p...</p></div></div></a></div><div class="card"> <a href="/posts/aosp-repo-guide/"><div class="card-body"> <span class="timeago small" >Nov 12, 2020<i class="unloaded">2020-11-12T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>使用 Repo 下载 AOSP 源代码</h3><div class="text-muted small"><p> 本指导记录了在 Windows 下（除了安装外，其余章节 Linux 同样适用）使用 Repo 工具的过程，包括安装 Repo、配置代理、同步全部或部分 Android Open Source Project（APPS）工程源代码到本地，可方便 Android 系统研究人员后续使用 Source Insight 等工具本地查阅代码。 安装 Repo（Windows） 安装 Python ...</p></div></div></a></div><div class="card"> <a href="/posts/dexguard-troubleshooting/"><div class="card-body"> <span class="timeago small" >May 9, 2018<i class="unloaded">2018-05-09T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>DexGuard 常见问题解决</h3><div class="text-muted small"><p> multidex 错误 Android 对单个工程包含的总方法数有限制，最多是 65535 个。如果工程较大，方法数超过这个数目，就要使用 multidex 技术，否则将会运行错误。multidex 将原来编译出的 dex 文件分割为多个子 dex 文件，APP 运行时再拼接起来。DexGuard 使用自己实现的 multidex 支持，因而使用上需要一些配置。 错误日志 Overfl...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"> <a href="/posts/aosp-repo-guide/" class="btn btn-outline-primary" prompt="Older"><p>使用 Repo 下载 AOSP 源代码</p></a> <a href="/posts/mit-6858-course-1-introduction-threat-models/" class="btn btn-outline-primary" prompt="Newer"><p>MIT 6.858 Course 1 - Introduction, Threat Models</p></a></div></div></div></div><footer class="d-flex w-100 justify-content-center"><div class="d-flex justify-content-between align-items-center"><div class="footer-left"><p class="mb-0"> © 2024 <a href="https://twitter.com/username">Hongbo Lin</a>. <span data-toggle="tooltip" data-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author.">Some rights reserved.</span></p></div><div class="footer-right"><p class="mb-0"> Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></footer></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><h4 class="text-muted mb-4">Trending Tags</h4><a class="post-tag" href="/tags/openwrt/">OpenWrt</a> <a class="post-tag" href="/tags/shadowsocks/">Shadowsocks</a> <a class="post-tag" href="/tags/nas/">NAS</a> <a class="post-tag" href="/tags/dexguard/">DexGuard</a> <a class="post-tag" href="/tags/apache/">Apache</a> <a class="post-tag" href="/tags/chromium/">Chromium</a> <a class="post-tag" href="/tags/clash/">Clash</a> <a class="post-tag" href="/tags/compiler/">Compiler</a> <a class="post-tag" href="/tags/ddns/">DDNS</a> <a class="post-tag" href="/tags/esxi/">ESXi</a></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a> <script src="https://cdn.jsdelivr.net/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">Oops! No result founds.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="https://cdn.jsdelivr.net/combine/npm/lozad/dist/lozad.min.js,npm/magnific-popup@1/dist/jquery.magnific-popup.min.js,npm/clipboard@2/dist/clipboard.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.16.1,npm/bootstrap@4/dist/js/bootstrap.min.js"></script> <script defer src="/app.js"></script> <script defer src="https://www.googletagmanager.com/gtag/js?id=UA-118658920-3"></script> <script> document.addEventListener("DOMContentLoaded", function(event) { window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'UA-118658920-3'); }); </script>

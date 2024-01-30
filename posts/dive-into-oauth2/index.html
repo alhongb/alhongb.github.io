@@ -1,0 +1,273 @@
+<!DOCTYPE html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="day-prompt" content="days ago"><meta name="hour-prompt" content="hours ago"><meta name="minute-prompt" content="minutes ago"><meta name="justnow-prompt" content="just now"><meta name="generator" content="Jekyll v4.3.3" /><meta property="og:title" content="深入理解 OAuth 2.0" /><meta property="og:locale" content="en" /><meta name="description" content="OAuth 2.0 RFC（The OAuth 2.0 Authorization Framework）篇幅很长、内容详实，覆盖了包括原理概念、工作流程、报文格式、安全性、拓展性等等诸多方面，直接阅读十分不易。因此，本文结合博主的背景知识，提取、翻译规范主干内容并深入解读 OAuth 2.0，意图帮助读者避免一开始就陷入 RFC 的繁枝末节中。" /><meta property="og:description" content="OAuth 2.0 RFC（The OAuth 2.0 Authorization Framework）篇幅很长、内容详实，覆盖了包括原理概念、工作流程、报文格式、安全性、拓展性等等诸多方面，直接阅读十分不易。因此，本文结合博主的背景知识，提取、翻译规范主干内容并深入解读 OAuth 2.0，意图帮助读者避免一开始就陷入 RFC 的繁枝末节中。" /><link rel="canonical" href="https://linhongbo.com/posts/dive-into-oauth2/" /><meta property="og:url" content="https://linhongbo.com/posts/dive-into-oauth2/" /><meta property="og:site_name" content="Hongbo Lin" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2020-03-16T00:00:00+08:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="深入理解 OAuth 2.0" /><meta name="twitter:site" content="@twitter_username" /><meta name="google-site-verification" content="google_meta_tag_verification" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-03-17T14:34:48+08:00","datePublished":"2020-03-16T00:00:00+08:00","description":"OAuth 2.0 RFC（The OAuth 2.0 Authorization Framework）篇幅很长、内容详实，覆盖了包括原理概念、工作流程、报文格式、安全性、拓展性等等诸多方面，直接阅读十分不易。因此，本文结合博主的背景知识，提取、翻译规范主干内容并深入解读 OAuth 2.0，意图帮助读者避免一开始就陷入 RFC 的繁枝末节中。","headline":"深入理解 OAuth 2.0","mainEntityOfPage":{"@type":"WebPage","@id":"https://linhongbo.com/posts/dive-into-oauth2/"},"url":"https://linhongbo.com/posts/dive-into-oauth2/"}</script><title>深入理解 OAuth 2.0 | Hongbo Lin</title><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="Hongbo Lin"><meta name="application-name" content="Hongbo Lin"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://fonts.gstatic.com"><link rel="preconnect" href="https://www.google-analytics.com" crossorigin="use-credentials"><link rel="dns-prefetch" href="https://www.google-analytics.com"><link rel="preconnect" href="https://www.googletagmanager.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://www.googletagmanager.com"><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css"><link rel="stylesheet" href="/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/magnific-popup@1.1.0/dist/magnific-popup.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script><body data-spy="scroll" data-target="#toc"><div id="sidebar" class="d-flex flex-column align-items-end" lang="en"><div class="profile-wrapper text-center"><div id="avatar"> <a href="/" alt="avatar" class="mx-auto"> <img src="/assets/img/avatar.png" alt="avatar" onerror="this.style.display='none'"> </a></div><div class="site-title mt-3"> <a href="/">Hongbo Lin</a></div><div class="site-subtitle font-italic">A technology-focused blogger.</div></div><ul class="w-100"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <a href="https://github.com/alhongb" aria-label="github" class="order-3" target="_blank" rel="noopener"> <i class="fab fa-github"></i> </a> <a href="https://twitter.com/twitter_username" aria-label="twitter" class="order-4" target="_blank" rel="noopener"> <i class="fab fa-twitter"></i> </a> <a href=" javascript:location.href = 'mailto:' + ['example','doamin.com'].join('@')" aria-label="email" class="order-5" > <i class="fas fa-envelope"></i> </a> <a href="/feed.xml" aria-label="rss" class="order-6" > <i class="fas fa-rss"></i> </a> <span class="icon-border order-2"></span> <span id="mode-toggle-wrapper" class="order-1"> <i class="mode-toggle fas fa-adjust"></i> <script type="text/javascript"> class ModeToggle { static get MODE_KEY() { return "mode"; } static get DARK_MODE() { return "dark"; } static get LIGHT_MODE() { return "light"; } constructor() { if (this.hasMode) { if (this.isDarkMode) { if (!this.isSysDarkPrefer) { this.setDark(); } } else { if (this.isSysDarkPrefer) { this.setLight(); } } } var self = this; /* always follow the system prefers */ this.sysDarkPrefers.addListener(function() { if (self.hasMode) { if (self.isDarkMode) { if (!self.isSysDarkPrefer) { self.setDark(); } } else { if (self.isSysDarkPrefer) { self.setLight(); } } self.clearMode(); } self.updateMermaid(); }); } /* constructor() */ setDark() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); } setLight() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); } clearMode() { $('html').removeAttr(ModeToggle.MODE_KEY); sessionStorage.removeItem(ModeToggle.MODE_KEY); } get sysDarkPrefers() { return window.matchMedia("(prefers-color-scheme: dark)"); } get isSysDarkPrefer() { return this.sysDarkPrefers.matches; } get isDarkMode() { return this.mode == ModeToggle.DARK_MODE; } get isLightMode() { return this.mode == ModeToggle.LIGHT_MODE; } get hasMode() { return this.mode != null; } get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); } /* get the current mode on screen */ get modeStatus() { if (this.isDarkMode || (!this.hasMode && this.isSysDarkPrefer) ) { return ModeToggle.DARK_MODE; } else { return ModeToggle.LIGHT_MODE; } } updateMermaid() { if (typeof mermaid !== "undefined") { let expectedTheme = (this.modeStatus === ModeToggle.DARK_MODE? "dark" : "default"); let config = { theme: expectedTheme }; /* re-render the SVG › <https://github.com/mermaid-js/mermaid/issues/311#issuecomment-332557344> */ $(".mermaid").each(function() { let svgCode = $(this).prev().children().html(); $(this).removeAttr("data-processed"); $(this).html(svgCode); }); mermaid.initialize(config); mermaid.init(undefined, ".mermaid"); } } flipMode() { if (this.hasMode) { if (this.isSysDarkPrefer) { if (this.isLightMode) { this.clearMode(); } else { this.setLight(); } } else { if (this.isDarkMode) { this.clearMode(); } else { this.setDark(); } } } else { if (this.isSysDarkPrefer) { this.setLight(); } else { this.setDark(); } } this.updateMermaid(); } /* flipMode() */ } /* ModeToggle */ let toggle = new ModeToggle(); $(".mode-toggle").click(function() { toggle.flipMode(); }); </script> </span></div></div><div id="topbar-wrapper" class="row justify-content-center topbar-down"><div id="topbar" class="col-11 d-flex h-100 align-items-center justify-content-between"> <span id="breadcrumb"> <span> <a href="/"> Home </a> </span> <span>深入理解 OAuth 2.0</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Post</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> <i class="fa fa-times-circle fa-fw" id="search-cleaner"></i> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper"><div id="main"><div class="row"><div id="post-wrapper" class="col-12 col-lg-11 col-xl-8"><div class="post pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><h1 data-toc-skip>深入理解 OAuth 2.0</h1><div class="post-meta text-muted d-flex flex-column"><div> <span class="semi-bold"> Hongbo Lin </span> on <span class="timeago " data-toggle="tooltip" data-placement="bottom" title="Mon, Mar 16, 2020, 12:00 AM +0800" >Mar 16, 2020<i class="unloaded">2020-03-16T00:00:00+08:00</i> </span></div><div> <span> Updated <span class="timeago lastmod" data-toggle="tooltip" data-placement="bottom" title="Fri, Dec 3, 2021, 11:36 PM +0800" >Dec 3, 2021<i class="unloaded">2021-12-03T23:36:58+08:00</i> </span> </span> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="10145 words">56 min read</span></div></div><div class="post-content"><p>OAuth 2.0 RFC（<a href="https://tools.ietf.org/html/rfc6749">The OAuth 2.0 Authorization Framework</a>）篇幅很长、内容详实，覆盖了包括原理概念、工作流程、报文格式、安全性、拓展性等等诸多方面，直接阅读十分不易。因此，本文结合博主的背景知识，提取、翻译规范主干内容并深入解读 OAuth 2.0，意图帮助读者避免一开始就陷入 RFC 的繁枝末节中。</p><h2 id="概念介绍">概念介绍</h2><p>在传统的客户端/服务器（client-server）认证模型中，客户端直接使用 resource owner（资源所有者）的凭据（credentials，例如账户和口令）来请求访问服务器上的 protected resource（受保护资源）。在这种模型下，想要提供第三方访问 protected resource 的 能力，resource orwner 就需要将其凭证分享给第三方。这就引入一些问题与局限：</p><ol><li>第三方应用（third-party application）需要存储 resource owner 的凭据以供后续使用，通常会是明文的口令。<li>服务器需要支持口令认证，尽管这种认证方式有固有的弱点。<li>第三方应用能够访问 resource owner 过于广泛的受保护资源，而 resource owner 缺乏任何限制能力，包括限制访问的时间周期、范围。（解读：这是因为用于认证 resource owner 身份的原始凭证已经泄露给三方了）<li>resource owner 无法吊销特定三方的访问，而只能撤销所有三方的访问权限，而且要做的这点，必须通过修改密码的方式。<li>任何一个第三方应用的失陷（compromise）都会造成最终用户的口令泄露，也即意味着所有受此口令保护的资源将沦陷。</ol><p>解读：传统授权模型具有上述缺陷的根本原因在于 client 和 resource owner 之间没有区分开：当 client 获取到原始授权凭据后，它实际就成为了 resource owner。</p><p>OAuth 2.0 授权框架通过在 client 和 resource owner 之间引入一个 authorization layer（这是一个抽象的层，abstraction layer）并将角色 client 从 resource owner 中分离来解决上述问题：client 不再使用 resource owner 自身的凭据来访问 resource owner 控制的、由 resource server 托管的 resource。</p><p>client 不使用 resource owner 自身凭据来访问资源，而是使用 access token —— 一个可以表示访问的范围，生命周期，及其他属性的字符串。access token 在 resource owner 的同意下由 authorization server 颁布给第三方客户端（client），接着 client 用 access token 来访问托管于 resource server 的受保护资源。</p><p>举例来说：一个最终用户（resource owner) 可以授权某个打印机服务（client）访问她存储于照片分享服务提供者（resource server）上的受保护照片，而不用和打印机服务分享她自己的用户名和口令。取代之的是，她直接向照片分享服务提供者信任的服务器认证（authorization server），然后服务器向打印机服务发布委托专用（delegation-specific）凭据（access token）。</p><p>解读：「委托专用」意味该凭据只能用于委派访问场景，而不可用于其他的，如认证场景。传统认证授权模式下客户端直接使用用户「身份」，即使后续不保存用户的凭证（账户和口令），也使用了 token、session ID 等身份认证凭据。这是两种模式的本质区别，也是「授权」和「认证」的区别。</p><h3 id="角色">角色</h3><p>OAuth 2.0 授权模型定义了四种角色</p><ul><li>resource owner</ul><p>资源所有者，是能够授予受保护资源访问权的实体。特别地，当资源所有者是一个人时，称之为 end-user（最终用户）</p><ul><li>resource server</ul><p>资源服务器，托管受保护资源的服务器，能勾接收和响应受保护资源请求（通过 access token）</p><ul><li>client</ul><p>客户端，一个在 resource owner 的授权下代其请求受保护资源的应用。RFC6749 特别指明「client」这一术语没有任何具体技术实现的约束，所以不论是在服务器、桌面平台还是终端设备上运行的各类程序，都是可以的。</p><ul><li>authorization server</ul><p>授权服务器，在成功认证 resource owner 并获其授权（authorization）后颁发 access token 的服务器</p><p>OAuth 2.0 也没有规定 authorization server 和 resource server 之间应该如何交互：根据不同的实现，二者可以同时部署在一个服务器上，也可以分属于不同的实体。而且，单个 authorization server 也可能签发被多个 resource server 接受的 access token。</p><h3 id="protocol-flow">Protocol Flow</h3><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre><td class="rouge-code"><pre>     +--------+                               +---------------+
+     |        |--(A)- Authorization Request -&gt;|   Resource    |
+     |        |                               |     Owner     |
+     |        |&lt;-(B)-- Authorization Grant ---|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(C)-- Authorization Grant --&gt;| Authorization |
+     | Client |                               |     Server    |
+     |        |&lt;-(D)----- Access Token -------|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(E)----- Access Token ------&gt;|    Resource   |
+     |        |                               |     Server    |
+     |        |&lt;-(F)--- Protected Resource ---|               |
+     +--------+                               +---------------+
+
+                  图 1：逻辑工作流程
+</pre></table></code></div></div><p>OAuth 2.0 定义了多种工作模式以应用不同场景，但逻辑上它们的工作流程可以统一地抽象为上图，此图描述了各角色间如何交互：</p><p>(A) client 请求来自 resource owner 的授权。授权请求可以直接地发往 resource owner（正如图中所示），也可以间接地通过 authorization server 作为中介来处理。</p><p>(B) client 获得 resource owner 的授权许可（authorization grant）。这里许可模式（grant type）取决于 client 请求中的参数以及 authorization server 侧是否支持，可以是 RFC 中定义的四种之一，也可以是自定义扩展方式。详见后文。</p><p>注解：在不同工作模式下，resource owner 可以使用其凭证直接响应 client 的访问请求（这将暴露其凭证给 client 所属的第三方或所在的应用程序环境），也可以转而在独立的 authorization server （即所谓的抽象授权层）处处理访问请求。显然，这两种方式有着不同的安全等级。</p><p>(C) client 向 authorization server 认证自己的身份并展示（resource owner 的） 授权许可，以获取 access token。</p><p>(D) authorization server 认证 client 并校验授权许可，如果合法，颁发 access token。</p><p>(E) client 展示 access token 来认证，请求访问 resource server 上的受保护资源</p><p>(F) resource server 校验 access token ，如果合法，正常响应资源请求</p><h3 id="authorization-grant">Authorization Grant</h3><p>authorization grant （授权许可），是一个代表 resource owner 对受保护资源进行了授权的凭据，被 client 使用来获取访问资源的 access token。OAuth 2.0 定义了四种类型（type）的 authorization grant，包括：authorization code、implicit、resource owner password credentials 和 client credentials。字面上看，它们的区别在于有的直接使用 resource owner 的账户口令来授权，有的采用间接方式授权，而有的只用 client 身份即可获得访问授权。此外，OAuth 2.0 还支持<a href="https://tools.ietf.org/html/rfc6749#section-4.5">扩展的许可类型</a>，受限篇幅本文不做介绍。</p><p>回顾逻辑工作流图可以看到，authorization grant 被用于 (B)、(C) 两个步骤，实际工作流中则分别对应有四种「flow」。其中有些工作流程简单、有些相对复杂，有些具有 OAuth 2.0 全部安全属性而有些则安全性欠佳。这部分内容在章节<a href="#四种授权模式及工作流">「四种授权模式及工作流」</a>会详细展开介绍。</p><h3 id="access-token">Access Token</h3><p>access token 是访问受保护资源的凭据，是一段颁布给 client、代表授权的字符串。具体而言，token 表达了 resource owner 授予访问的特定范围（scope）、持续时间，并且由 resource server 和 authorization server 落实前述限制。通常，access token 字符串（的含义）对 client 不透明。</p><p>有两种类型的 token 实现：1. 作为授权信息的索引，以获取实际的授权信息；2. 自包含（self-contain）授权信息，并且可执行校验，例如一串包含数据和数字签名的字符串（一个典型的例子是 JSON Web Token，缩写 JWT）。实践中，client 使用 access token 可能还需要其他认证凭据，这点不在 OAuth 2.0 规范范围内。</p><p>前文提到 OAuth 2.0 引入了一个授权抽象层，access token 就是实现抽象的关键措施：它替换了原有的授权结构，相比用户名、密码等传统授权方式，使用 access token 授权可以实行更多的约束机制（原文：「This abstraction enables issuing access tokens more restrictive than the authorization grant used to obtain them」）。另外，这使得授权协议更加简洁：resource server 只需理解 access token ，而不需要理解各式各样的认证方式。</p><p>access token 可以有不同的格式、结构、以及采取的措施（例如密码学属性），取决于服务端的安全需求。access token 具备哪些属性、如何用它来访问受保护资源方法的定义超出了本规范的范畴，在多个配套的 RFC 定义：如 <a href="https://tools.ietf.org/html/rfc6750">The OAuth 2.0 Authorization Framework: Bearer Token Usage - RFC6450</a> 定义了 目前 OAuth 2.0 主流使用 access token 的方式（称之为 Bearer Token），包括定义 HTTP 报文格式等，Bearer Token 的格式在这个规范中依然没有定义，可以是简短的字符串，也可以是 JWT）；<a href="https://tools.ietf.org/html/rfc7662">OAuth 2.0 Token Introspection - RFC 7662</a> 则定义了一个协议，包括 access token 的属性规格（例如有效性，允许的 scope 上下文等）以及 resource owner 如何与 authorization server 通信来获取 access token 的属性信息。</p><h3 id="refresh-token">Refresh Token</h3><p>refresh token 是获取 access token 的凭据。refresh token 由 authorization server 颁布给 client，用于获取新的 access token ——当前的 access token 已失效或过期、为了获取额外的 scope 等价或收窄的 access token（access token 可能具有更短的生命周期和更少的用户授权）。是否签发 refresh token 取决于 authorization server 的权衡，如果签发，将随 access token 一同发布（如图 1 的 (D) 步骤）</p><p>同样，refresh token 也是一段代表 resource owner 对 client 授权的字符串，且该字符串也是对 client 不透明。token 是授权信息的标识（索引），以供检索授权信息。与 access token 不同，refresh token 仅适用于 authorization server，而且绝不会发送给 resource server。</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+</pre><td class="rouge-code"><pre>  +--------+                                           +---------------+
+  |        |--(A)------- Authorization Grant ---------&gt;|               |
+  |        |                                           |               |
+  |        |&lt;-(B)----------- Access Token -------------|               |
+  |        |               &amp; refresh token             |               |
+  |        |                                           |               |
+  |        |                            +----------+   |               |
+  |        |--(C)---- Access Token ----&gt;|          |   |               |
+  |        |                            |          |   |               |
+  |        |&lt;-(D)- Protected Resource --| Resource |   | Authorization |
+  | Client |                            |  Server  |   |     Server    |
+  |        |--(E)---- Access Token ----&gt;|          |   |               |
+  |        |                            |          |   |               |
+  |        |&lt;-(F)- Invalid Token Error -|          |   |               |
+  |        |                            +----------+   |               |
+  |        |                                           |               |
+  |        |--(G)----------- refresh token -----------&gt;|               |
+  |        |                                           |               |
+  |        |&lt;-(H)----------- Access Token -------------|               |
+  +--------+           &amp; Optional refresh token        +---------------+
+
+               图 2：刷新过期的 Access Token
+</pre></table></code></div></div><p>图 2 所示的 access token 刷新流程包括以下步骤:</p><p>(A) client 使 resouce owner 的 authorization grant 作为认证，向 authorization server 请求 access token</p><p>(B) authorization server 认证 client 并校验 authorization grant，如果合法，签发 access token 和 refresh token。</p><p>(C) client 使用 access token 向 resource server 请求访问受保护资源</p><p>(D) resource server 校验 access token ，如果合法，服务本次请求。</p><p>(E) 重复步骤 (C) 和 (D) 直到 access token 过期。如果 client 发现 access token 过期，跳到步骤 (G)；否则发起下一次受保护资源请求</p><p>(F) 由于 access token 非法，resource server 返回一个 token 无效的错误</p><p>(G) client 向 authorization server 认证身份并使用 refresh token 申请一个新的 access token 。client 认证要求取决于client的类型以及 authorization server 的策略。</p><p>(H) authorization server 认证 client 并校验 refresh token，如果合法，签发一个新的 access token （可选地，一个新的 refresh token）。</p><p>步骤 (C)，(D)，(E)， 和 (F) 的实现细节超出了 OAuth 2.0 规范的范畴、</p><p>注：规范对 refresh token 在不同工作模式的约束如下</p><div class="table-wrapper"><table><thead><tr><th>工作模式<th>Refresh Token<tbody><tr><td>code<td>可选<tr><td>implicit<td>禁用<tr><td>password<td>可选<tr><td>client<td>不应该使用</table></div><h3 id="client">Client</h3><h4 id="client-registration">Client Registration</h4><p>接入 OAuth 2.0 协议之前，要向 authorization server 注册 client，使 authorization server 能提前获知 clients 的信息以做更细粒度的访问控制，至于通过何种渠道注册并不在规范范畴内定义，通常情况是用户在 HTML 表单中提交注册操作。而注册的内容，OAuth 2.0 认为<strong>应该</strong>包括：</p><ul><li>指定 client type，正如本文下一节 <a href="#client-type-and-client-authentication">「Client Type」</a> 所述的<li>提供 client 的 redirection URI</ul><p>重定向 URI 是标识可以接受响应的一个地址，无论是 client、user-agent 还是 authorization server，都会使用这种地址跳转技术来发送或接受消息，这种行为类似于软件开放中的 callback：请求者留下一个重定向地址，响应者则通过这一地址发送准备好的响应。在 OAuth 2.0 你将多次看到它。详细内容参考 <a href="https://tools.ietf.org/html/rfc6749#section-3.1.2">rfc6749#section-3.1.2</a></p><p>根据规范。除了 authorization code 工作流步骤 <code class="language-plaintext highlighter-rouge">(D)</code> 里的重定向 URI 是 client 请求时必须提供的参数外，在其他请求里都是可选的——若注册时提供了重定向 URI，则请求里的重定向 URI 必须与注册时一致。后面会提到其中的安全考虑。</p><ul><li>authorization server 要求的任何其他信息，如应用名称、网站地址、描述、logo 图片和接受的法律条款等等</ul><h4 id="client-type-and-client-authentication">Client Type and Client Authentication</h4><p>OAuth 2.0 身份信息是否机密两种类型的 client</p><ol><li>confidential client</ol><p>具备安全地保管客户端凭证的能力的 client ，例如由安全服务器实现的程序。一个 client 是 confidential 的，意味着 authorization server 出于安全需求，会（且<a href="https://tools.ietf.org/html/rfc6749#section-3.2.1">必须</a>）对 client 执行满足其安全要求的认证措施，而 client 用于认证的身份凭证可以是口令、公私钥对等等。</p><p>你可能会问，为什么要对 client 进行认证，有什么好处？</p><ul><li><strong>将签发给 client 的 refresh token 和 authorization code 和 client 绑定起来</strong>（只能被相应 client 使用），并能校验，尤其是在不安全传输通道传递或重定向 URI（指向 redirection endpoint 即 client）在注册时并不完整的情况下。<li>可以对 compromised 的 client 进行吊销，从而避免攻击者滥用盗取的 refresh token，至于如何吊销，禁用或改变某个 client 的身份凭证均可。很明显，禁用/改变单个 client 的身份凭证比吊销一整套 refresh token 要来得快捷。<li>带来认证管理的最佳实践，因为认证管理一般要求定期轮转身份凭证（periodic credential rotation）。定期轮转一整套的 refresh token 要比轮转单独的 client 身份凭证要复杂得多。</ul><ol><li>public client</ol><p>缺乏安全保管凭证的能力的 client，例如安装到最终用户设备的软件。authorization server 可选（MAY）和 public client 建立身份认证措施。然而，此时 authorization server 一定不能（MUST NOT) 为了辨识 client 身份而信赖 public client 的认证结果。</p><p>解读：这是很显然的，public client 不具备安全的认证能力</p><h4 id="典型的-client-实现">典型的 client 实现</h4><p>有 3 种典型实现：</p><ul><li><p>web application</p><p>使用诸如 PHP、Java、Python、Ruby 和 ASP.NET 这样的语言和相应框架开发的运行在服务器上的程序（也叫后端），resource owner 在设备上通过 user-agent（一般就是浏览器）访问其提供的 HTML 用户界面（也叫前端）。这种架构下，client 的身份凭据以及任何被颁予的 access token/refresh token 都存储在后端，即不会暴露给 resource owner。所以有前后端之分的 web application 是 confidential 的，应使用最完整、最安全的 authorization code 授权模式（grant type）。实际例子： Google OAuth 2.0 之 <a href="https://developers.google.com/identity/protocols/OAuth2WebServer">Web Server Applications</a>。</p><li><p>user-agent-based application</p><p>顾名思义，这是一种代码是从 Web 服务器上下载然后运行在用户设备上的 user-agent（例如浏览器）之上的 client。它没有执行代码的后端服务器，只有负责托管前端资源服务器，因此只能借助 user-agent 的能力来调用 resource server、authorization server 的接口。也因此 OAuth 2.0 工作流程中的数据流、凭证&amp;授权信息都将很容易就能被 resource owner 访问（通常也是可见的）。所以，它使用 code 模式将没有意义，不仅没有安全效益，还会降低性能。显然 user-agent-based application 是 public 的，应使用 implicit 授权模式。实际例子：Google OAuth 2.0 之 <a href="https://developers.google.com/identity/protocols/OAuth2UserAgent">Client-side Web Applications</a>（也有称为 Single-Page Apps 的）。</p><li><p>native application</p><p>一种在最终用户设备上安装和运行（比如桌面应用，手机原生应用）、并被 resource owner 使用的 client，与 user-agent-based application 一样，数据流、凭证&amp;授权信息也是可以被 resource owner 访问的。native application 是 public 的，可以使用 authorization code 模式或 implicit 模式，但由于 native application 不具维持身份凭证机密性的能力，因而使用 authorization code 授权模式将达不到预期的安全性，所以理论上不应该执行 client credentials 验证。但在 <a href="https://tools.ietf.org/html/rfc8252">OAuth 2.0 for Native Apps</a> 和 <a href="https://tools.ietf.org/html/rfc7636">Proof Key for Code Exchange by OAuth Public Clients (PKCE)</a> 两个 native application 实践规范中提出了改进的使用 authorization code 授权模式方法，读者可自行前往了解。实际的例子有：Google OAuth 2 之 <a href="https://developers.google.com/identity/protocols/OAuth2InstalledApp">Mobile &amp; Desktop Apps</a></p></ul><p>到这里你可能会疑惑，native application 与前述 user-agent-based application 有什么区别呢？</p><p>user-agent-based application 本身就运行在 user-agent（如浏览器）内部，所以它很容易就能利用 user-agent 的能力来执行授权请求（想想看，授权系统大部分是构建在 HTTP Web 上，并使用 user-agent 提供用户界面），而 native application （注意区别于 user-agent，二者概念上是分离的）：它需要额外借助一个 external user-agent （例如：独立的浏览器应用）或 embedded user-agent（例如：嵌入原生应用的 WebView）来执行授权请求，所以相比 user-agent-based application，native application 要特别地考虑安全性、操作系统特性以及整体的用户体验。</p><p>另外，按使用不同形式的 user-agent ，native application 接收 authorization server 响应的授权信息（ token 或 code）的方式不同：</p><p>External user-agent - native application 向操作系统预先注册 URI scheme（例如 <a href="https://developer.android.com/training/app-links">Android Deep Link</a>），然后由 user-agent 重定向此 URI 来接收响应（参考 <a href="https://developer.chrome.com/multidevice/android/intents">Chrome 的实现</a>）；手动复制粘贴授权信息；启动一个本地的 web 服务器；安装一个浏览器插件/扩展；或如果有 client 可控的服务器，也可以重定向响应到该服务器，由该服务转递给 native application 使用；</p><p>Embedded user-agent - native application 通过直接通信从 embedded user-agent 处接受响应，所谓直接通信，包括监视资源加载时导致的状态变化或访问 user-agent 的 cookie 存储。</p><p>（造成上述二者区别的原因：技术上前者通常和 native application 是不同应用程序，有不同进程边界，而后者则或运行在 native application 的进程空间或属于 native application 的一部分）</p><p>扩展解读：距离 RFC6749 发布近 8 年，现代浏览器的技术实现细节发生了很多变化，规范早期定义的 user-agent 的具体形态也随之调整。例如 Android 平台 Chrome 浏览器的 <a href="https://developer.chrome.com/multidevice/android/customtabs">Custom Tab</a> 特性，提供了一种不离开应用（in-app）使用浏览器的方式，这种情景下 user-agent 虽然「嵌入」到应用内，却具有隔离的运行空间和上下文，应用无法访问 Tab 内的 Web 内容。因此术语「external」应当引申为具有独立隔离的运行、安全环境，而不局限于字面意义上的「外部」。</p><h3 id="protocol-endpoints">Protocol Endpoints</h3><p>先介绍 endpoint 概念:</p><blockquote><p>在 Web 服务领域，endpoint是代表该服务对外暴露的一个或多个可以接受消息的最终端点（endpoint），即可被调用者引用的入口、处理器或资源，使得来自外部的 Web 消息可以寻址到该最终端点。endpoint 传达了寻址 Web 服务所需的信息，客户端需要先了解此信息，然后才能访问服务。</p></blockquote><p>一句话解释：Web 服务用 endpoint 对外描述自己提供的接口的信息，使得客户端能够参考这些信息决定使用哪个 endpoint 的接口来访问服务，Web 服务可以按业务逻辑需要划分一个或多个 endpoint</p><p>OAuth 2.0 也使用 endpoint 来描述不同角色的不同功能接口，整个 OAuth 2.0 授权流程涉及的 endpoint 包括：</p><h4 id="authorization-server-的两个-endpoint">Authorization Server 的两个 Endpoint</h4><ul><li>Authorization endpoint - 被 client 用来获取 resource owner 的授权，借助于 user-agent 的重定向机制。<li>Token endpoint - 被 client 用来将（用户的）授权兑换为一个 access token，通常伴随着对 client 的认证。</ul><h4 id="client-的一个-endpoint">Client 的一个 Endpoint</h4><ul><li>Redirection endpoint - 被 authorization server 用来返回包含授权凭证的响应，借助 resource owner 的 user-agent</ul><p>这些 endpoint 在四种工作模式中会或全部或部分的参与使用</p><h3 id="access-token-scope">Access Token Scope</h3><p>scope 是在 client 发起 authorization request 时可选的参数，使 client 可以指定访问资源的范围，authorization server 在 acccess token 中响应的 scope 必须是以下情况之一</p><ul><li>实际的 scope（如果认为 client 指定的范围太大）<li>默认的 scope<li>scope非法</ul><p>scope 的格式是 用空格拼接的一个或多个字符串，字符串内容由 authorization server 自行定义，OAuth 2.0 规范中不做约束。</p><p>更多关于 Protocol Endpoints 的介绍请参考 <a href="https://tools.ietf.org/html/rfc6749#section-3">rfc6749#section-3</a></p><h2 id="四种授权模式及工作流">四种授权模式及工作流</h2><p>前文提到 resource owner 有四种授权模式（grant type）对 client 进行 authorization grant，对应的，有四种工作流程，本章逐一介绍。</p><p>拓展阅读：其实，OAuth 的 1.0 版本期望用全面的单一协议流程来囊括所有应用场景（OAuth 1.0 早期本来也是分离的三种流程，但后来各方讨论后合并为单一种），然而实践中发现单一流程虽能比较好地适用于基于 Web 的应用程序，但在其他方面却提供了较差的体验，而单一但复杂的流程也造成了集成困难和混乱。OAuth 2.0 版本，终于回归细分场景适配不同流程的策略。关于这部分内容，参见 <a href="https://www.oauth.com/oauth2-servers/differences-between-oauth-1-2/user-experience-alternative-token-issuance-options/">User Experience and Alternative Token Issuance Options</a>。</p><h3 id="authorization-code">Authorization Code</h3><p>此模式下 resource owner 以间接的方式完成授权许可：client 不直接请求 resource owner，而是将 resource owner 引导到 authorization server，由 authorization server 来处理授权请求。如果resource owner 批准了请求，authorization server 将反过来引导 resource owner 回到 client，并且伴随一个 authorization code。最终，client 凭借该 Code 请求 authorization server 来获取 Access Token。</p><p>authorization server 决定返回 authorization code 之前， 会对 resource owner 进行身份认证，并且该身份认证过程仅发生在 authorization server 处，因此其认证凭据任何时候都不会分享给 client。</p><p>同时，authorization code 还有一些安全上的裨益，例如 authorization server 能够认证 client （client 请求 access token 时）；access token 直接传递给 client，不会经由 resource owner 使用的 user-agent，从而避免 access token 暴露出去，包括暴露给 resource owner。</p><p>authorization code 模式是为私密型 client 定制的，流程如下图所示</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+</pre><td class="rouge-code"><pre>     +----------+
+     | Resource |
+     |   Owner  |
+     |          |
+     +----------+
+          ^
+          |
+         (B)
+     +----|-----+          Client Identifier      +---------------+
+     |         -+----(A)-- &amp; Redirection URI ----&gt;|               |
+     |  User-   |                                 | Authorization |
+     |  Agent  -+----(B)-- User authenticates ---&gt;|     Server    |
+     |          |                                 |               |
+     |         -+----(C)-- Authorization Code ---&lt;|               |
+     +-|----|---+                                 +---------------+
+       |    |                                         ^      v
+      (A)  (C)                                        |      |
+       |    |                                         |      |
+       ^    v                                         |      |
+     +---------+                                      |      |
+     |         |&gt;---(D)-- Authorization Code ---------'      |
+     |  Client |          &amp; Redirection URI                  |
+     |         |                                             |
+     |         |&lt;---(E)----- Access Token -------------------'
+     +---------+       (w/ Optional Refresh Token)
+
+    注：由于要穿过 user-agent，步骤（A），（B）和（C）的线间断为两部分。
+
+                  图 3：Authorization Code Flow
+</pre></table></code></div></div><p>图 3 描述的工作流程包含以下步骤：</p><p>(A) client 通过构造 URI 引导 resource owner 的 user-agent 到 authorization server 的 authorization endpoint 上。OAuth 2.0 定义的参数包括其 client 标识，请求的 scope，local state，和一个一旦访问被批准时 authorization server 将 user-agent 重定向回去的 URI，这些参数是通过 URI query component 发送的（也就是 URL ? 后的参数）。例子：</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre>    GET /authorize?response_type=code&amp;client_id=s6BhdRkqt3&amp;state=xyz
+        &amp;redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1
+    Host: server.example.com
+</pre></table></code></div></div><p>(B) authorization server 认证 resource owner（通过 user-agent）确定 resource owner 许可还是拒绝 client 的访问请求。</p><p>(C) 如果 resource owner 许可访问，authorization server 使用之前提供的重定向 URI（步骤 A 请求内或 client 注册阶段提供）将 user-agent 重定向回 client，并且通过 URI 的 query component 参数（也就是 URL ? 后携带 code）将 code 给 client。重定向的 URI 的参数（query component）包含 authorization code 以及 client 之前提供的 local state。</p><p>(D) client 使用上一步获取的 authorization code 向 authorization server 的 token endpoint 请求 access token。这个过程，client 会向 authorization server 发起身份认证。client 包含用于获取 authorization code 的重定向 URI，将用于验证。</p><p>(E) authorization server 认证 client，校验 authorization code 是否合法，并确保接收的重定向 URI 与步骤(C) 中用于重定向 client 的URI一致（在这里，URI 将用于返回 access token，需确保 authorization code 被对应的合法 client 使用）。如无问题，authorization server 以 access token 以及可选的 refresh token 作为响应。</p><p>注：(E) 步骤，对于 为了避免错误地使用颁发给其他 client_id 的 authorization code，无认证的 client 必须发送 client_id 到 authorization endpoint，以避免 authorization code 冒用（但此举并不会给 protected resource 带来额外的安全性）。来源：3.2.1 节。</p><p>由于重定向 URI 地址用于接收敏感的 code 和 token，避免发送到错误的 URI 对于安全而言至关重要。因此：1. 在 client 注册的时候应提供完整的重定向 URI（public client 必须，confidential client 应该），并确保工作流中的 URI 与注册时一致；2. 如果注册时未提供完整 URI，那么应该在 client 使用 code 来换 token 时，对 client 进行认证，使之与 code 签发时关联的 client 一致（另外一处 client 认证在其使用 refresh token 时）。</p><p>如果不校验两次 URI 是否一致，以及与注册时 URI 一致，否则面临以下的重定向 URI 篡改攻击：</p><blockquote><p>攻击者先在一个合法的 client（网站）注册一个账户，然后攻击者在自己的 user-gent 中发起 code 授权流程，进入到 authorization server 页面，此时攻击者可以将地址栏中合法 client 的重定向 URI 篡改成自己控制的 URI，然后将这样的链接发送给用户，用户被骗点击并完成授权，因为在 authorization server 处用户以为如平常一样授权给正常、可信的合法的 client，然而此时 code 被重定向发送给了攻击者的 URI。</p><p>攻击者取到 code 后使用正常的 client 重定向 URI 转发此 code，使流程继续，最终 code 换成 token，而此 token 绑定给了攻击者的账户，使得攻击者能够访问用户的资源。</p></blockquote><p>authorization code 模式不适合 Public 型 Client 使用，但在 <a href="https://tools.ietf.org/html/rfc8252">OAuth 2.0 for Native Apps</a> 和 <a href="https://tools.ietf.org/html/rfc7636">Proof Key for Code Exchange by OAuth Public Clients (PKCE)</a> 两个 native application 实践规范中提出了改进的使用 authorization code 授权模式方法。</p><h3 id="implicit">Implicit</h3><p>注：在 OAuth 2.0 RFC 发布之时 implicit 模式其实是专为运行在浏览器上用 JavaScript 等前端语言实现的 client 而优化的，因为这种 client 如果使用 authorization code 模式将存在两个矛盾：</p><ol><li>client 需要多次跳转（重定向）才能获取到 access token，响应慢，效率低。<li>浏览器内应用（in-browser application）没有服务器后端承载业务功能，「前端先获取 authorization code，后端再换取 token」 没有意义：不仅不会带来安全增益，反而降低效率。</ol><p>在 implicit 模式， resource owner 许可访问后， client 会被直接授予一个 access token 而不是“中间码”（authorization code）。这是和 authorization code 模式相比最大的区别。</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+</pre><td class="rouge-code"><pre>     +----------+
+     | Resource |
+     |  Owner   |
+     |          |
+     +----------+
+          ^
+          |
+         (B)
+     +----|-----+          Client Identifier     +---------------+
+     |         -+----(A)-- &amp; Redirection URI ---&gt;|               |
+     |  User-   |                                | Authorization |
+     |  Agent  -|----(B)-- User authenticates --&gt;|     Server    |
+     |          |                                |               |
+     |          |&lt;---(C)--- Redirection URI ----&lt;|               |
+     |          |          with Access Token     +---------------+
+     |          |            in Fragment
+     |          |                                +---------------+
+     |          |----(D)--- Redirection URI ----&gt;|   Web-Hosted  |
+     |          |          without Fragment      |     Client    |
+     |          |                                |    Resource   |
+     |     (F)  |&lt;---(E)------- Script ---------&lt;|               |
+     |          |                                +---------------+
+     +-|--------+
+       |    |
+      (A)  (G) Access Token
+       |    |
+       ^    v
+     +---------+
+     |         |
+     |  Client |
+     |         |
+     +---------+
+     注：由于要穿过 user-agent，步骤（A）和（B）的线间断为两部分。
+
+                       图 4: Implicit Grant Flow
+</pre></table></code></div></div><p>注：由于没有用 authortization code 交换 token 这一步骤，client 不和 authortization server 直接交互；implicit 模式下 authorization server 不认证 client，而是仅用重定向 URI 来标识 client 身份，因此确保 URI 的完整性是 implicit 模式的安全关键。</p><h3 id="resource-owner-password-credentials">Resource Owner Password Credentials</h3><p>不同于 authortization code 和 implicit 授权模式在 authorization server 处间接授权 client，resource owner password credentials 授权模式是 resource owner 直接将自身的口令（例如用户名和口令)）作为授权凭据，让 client 获取 access token。显而易见，这种授权模式仅适用于 resource owner 和 client 之间存在有高度的信任关系（比如 client 是操作系统的一部分或高度特权的应用），且其他的授权许可类型不可用时，意味着 auhtorization server 需要谨慎支持这种模式。</p><p>尽管该授权模式需要 client 直接接触 resource owner 的凭据（意味者存在凭据泄露或身份被仿冒的可能），但实际上 resource owner 的凭据仅在请求时使用一次，最终还是会被转换成 access token。因此，password 模式可用于需要规避 client 为了后续使用而存储 resource owner 凭据的场景（比如 HTTP Basic、HTTP Digest 认证），其核心安全收益在于将凭据替换成了长期的 access token 或 refresh token。</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre><td class="rouge-code"><pre>     +----------+
+     | Resource |
+     |  Owner   |
+     |          |
+     +----------+
+          v
+          |    Resource Owner
+         (A) Password Credentials
+          |
+          v
+     +---------+                                  +---------------+
+     |         |&gt;--(B)---- Resource Owner -------&gt;|               |
+     |         |         Password Credentials     | Authorization |
+     | Client  |                                  |     Server    |
+     |         |&lt;--(C)---- Access Token ---------&lt;|               |
+     |         |    (w/ Optional Refresh Token)   |               |
+     +---------+                                  +---------------+
+
+           图 5: Resource Owner Password Credentials Flow
+</pre></table></code></div></div><p>图 5 描述的工作流程包含以下步骤：</p><p>(A) resource owner 向 client 提供自己的用户名和口令。</p><p>(B) client 用上一步获取的凭据向 authorization server 的 token endpoint 请求 access token。</p><p>(C) authorization server 认证 client 和 resource owner 的凭证，如果合法，颁发 access token。</p><h3 id="client-credentials">Client Credentials</h3><p>client 可以仅使用其 client credentials （或其他支持的认证措施）就可请求 access token，这适用于被请求的 protected resource 属于 client 控制的场景（注解：代表 client 自己访问资源而用户），或是 authorization server 事先安排的、其他 resource owner 的 protected resource。</p><p>client credentials 授权模式必须仅用于 confidential 类型的 client。（因为这种授权模型，protected resource 的安全性依赖于对 client 的认证的安全性，public client 显然是不妥的）</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span text-data=" Plaintext "><i class="fa-fw fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre><td class="rouge-code"><pre>     +---------+                                  +---------------+
+     |         |                                  |               |
+     |         |&gt;--(A)- Client Authentication ---&gt;| Authorization |
+     | Client  |                                  |     Server    |
+     |         |&lt;--(B)---- Access Token ---------&lt;|               |
+     |         |                                  |               |
+     +---------+                                  +---------------+
+    
+                   图 6: Client Credentials Flow
+</pre></table></code></div></div><p>图 6 描述的工作流程包含以下步骤：</p><p>(A) client 向 authorization server 的 token endpoint 发起认证并请求一个 access token。</p><p>(B) authorization server 认证 client，如果合法，颁发一个 access token。</p><p>解读：client credentials 是四种授权模式中唯一不需要 resource owner 参与的，严格来说 client credentials 授权模式并不属于 OAuth 2.0 要解决的典型场景（用户向三方授权），但它提供了一种解决方案，使 OAuth 2.0 授权框架更完整，适用于更宽泛的场景。实际的应用例子可以参考 Keycloak 的 <a href="https://github.com/keycloak/keycloak-documentation/blob/master/server_admin/topics/clients/oidc/service-accounts.adoc">Service Account</a>。</p><h2 id="常见问题">常见问题</h2><ul><li><p><strong>如何理解 Redirection 和 Redirection URI？</strong></p><p>在 authorization code 和 implicit 授权模式，redirection 的目的和作用都是将 payload（credentials，例如 authorization code 和 access token）传递给 redirection URI 指定的实体。</p><p>在 authorization code 模式，有两次 redirection，一次是 authorization server 命令 user-agent 重定向到指定的 client URI ，来传递 authorization code 到 authorization code 授权模式的 client（一般在云端）；一次是 client 指定 authorization server 重定向到 client 提供的 redirection URI，来接收 access token。因此两次的 redirection URI 应当保持一致，且应是在预期的值，以确保安全。</p><p>在 implicit 模式，只有一次 redirection，authorization server 命令 user-agent 重定向到指定的 web-hosted client 提供的 redirection URI（实践中可以是系统 app-name:// 或 localhost），此时 user-agent 访问此 URI，但不会传递 access token（因为是 URI fragment 形式），web-hosted client URI 返回特定的 HTML/JS 页面，取出 access token，最终传递给 implicit 模式的 client（一般在本地）。</p><li><p><strong>为什么 Access token 之外还要引入 Authorization Code？</strong></p><p>因为不希望授权（token）被暴露到不安全的环境。按照 OAuth 2.0 的模型，用户的认证是在 user-agent 处完成的，当实际使用 access token 的 client 和用户使用的 user-agent （如浏览器）之间存在安全保护等级差异时，那么就引入一个中间态授权码（intermediate credentials ，来源于 <a href="https://tools.ietf.org/html/rfc6749#section-1.3.2">rfc6749#section-1.3.2</a>，在OAuth 2.0 中就是 authorization code ），使得 resource owner 所处的 user-agent 仅接触一次性的 authorization code，而永远不会接触到真正的授权 access token（即便是 resource owner 也不可见）。最终的 access token 则由更加可信的 client（例如 confidential client）保管，这在安全上就有意义：可以防止 access token 被非法使用（而 authorization code 仅一次有效，且需要合法 client 才能兑换为 access token）。例如：具有后端服务器 web application 或 native application，就可以使用 authorization code 模式来间接安全地获得 access token，而显而易见 user-agent-based application 所有实现都位于 user-agent（浏览器）内，不适合使用 authorization code 。</p><p>利用 authorization server 间接处理授权请求才是安全最佳的方式，才是完全符合 OAuth 2.0 将用户授权从client 中分离出来这一核心理念的工作流程。</p><li><p><strong>client 到底应该如何使用 access token 来请求资源？ resource server 又该如何校验 access token？</strong></p><p>你可能注意到 RFC 6749 并没有定义到底如何使用 access token，包括 client 以什么请求规格来使用 access token，更重要的 resource server 如何校验 access token 合法性、识别 scope，实际上规范甚至连 access token 的详细规格都没有定义：只说是一个代表权限被授予给 client 的字符串（”a string representing an access authorization issued to the client”），而非身份凭据。事实上 RFC 6749 只是抽象地说明了工作流程，而 access token 的规格和使用细节则超出规范范畴。（当然，这些都有配套 RFC 来规定）</p><p>前一个问题在 Bearer Token RFC 6750 中定义，你可搜索本文查到。</p><p>至于另外一个问题，有两种不同的思路的办法：其中很自然就想到的一种是 token 本身只是索引，resource server 通过查询 authorization server 来获取存储在数据库中的 access token 关联的元信息，这在 <a href="https://tools.ietf.org/html/rfc7662">OAuth 2.0 Token Introspection - RFC 6742</a> 中给出了详细的说明。</p><p>另一种则是本文提到的 self-container 即 token 自身包含结构化信息，典型实现是 JWT。在 RFC 7662 也提到了这一点。</p><li><p><strong>和 OAuth 1.0的差别？</strong></p><p><a href="https://www.oauth.com/oauth2-servers/differences-between-oauth-1-2/">https://www.oauth.com/oauth2-servers/differences-between-oauth-1-2/</a></p><li><p><strong>业界最佳实践？</strong></p><p><a href="https://developers.google.com/identity/protocols/OAuth2">https://developers.google.com/identity/protocols/OAuth2</a></p><li><p>**简单说下 OAuth 2 **</p><p><a href="https://aaronparecki.com/oauth-2-simplified/#single-page-apps">https://aaronparecki.com/oauth-2-simplified/#single-page-apps</a>（仅供参考）</p><li><p><strong>什么时候用OAuth 2.0？</strong></p><p><a href="https://stackoverflow.com/questions/40956418/is-oauth2-only-used-when-there-is-a-third-party-authorization">https://stackoverflow.com/questions/40956418/is-oauth2-only-used-when-there-is-a-third-party-authorization</a></p><li><p><strong>为什么OAuth 2 在 Access Token 之外还要引入 Refresh Token？</strong></p><p><a href="https://stackoverflow.com/questions/3487991/why-does-oauth-v2-have-both-access-and-refresh-tokens">https://stackoverflow.com/questions/3487991/why-does-oauth-v2-have-both-access-and-refresh-tokens</a></p><li><p><strong>OAuth和 Open ID，认证和授权，到底什么区别？</strong></p><p>参阅「Access Token 可以代表用户（认证）吗？」问题，正因为 access token 无法用于认证用户，而又有引入中间层（用户不直接在 client 处认证）的需求，因此诞生了 Open ID，使得 client 可以通过信任的另外的一个 authentication server 来认证某个用户：用户在这个 authentication server上使用凭据进行认证，然后 authentication server 告诉 client 用户真实的身份。</p><p>参考 <a href="https://security.stackexchange.com/questions/44611/difference-between-oauth-openid-and-openid-connect-in-very-simple-term">Difference Between OAUTH, OpenID and OPENID Connect in very simple term?</a></p><li><p><strong>Access Token 可以代表用户（认证）吗？</strong></p><p>access token 表征用户授权给特定的 client，而 client 用 access token 来在 resource server 处认证自己。换言之，如果 access token 用于「认证」，应当只能用于认证 client 自己，而不能用于认证用户。</p><p>一个可以证明将 access token 用来认证用户是错误的例子：假设 A、B 两个网站都依靠 C 网站的 access token 来认证用户，它们的做法是：如果能获取到访问 C 网站上用户 ID 的权限（access token），就用这个 ID 来认证用户。那么 A 网站就可以使用一个合法的 access token 在 B 网站上仿冒某个用户了，反之亦然。问题的根源在于网站们错误地将 access token 用于认证用户。这是对OAuth 2.0 的一种典型误用。</p><p>上述的回答还没有根本地回答问题，即为什么 client 从 access token 中无法获取用户的身份？仔细看 RFC6749 就可以知道，OAuth 2.0 规范并没有定义 access token 的规格，包括 client 如何解析 access token 等等，甚至规范认为 access token 作为字符串，对于 client 是不透明且没有语义的，client 只是拿着 access token 去访问资源，并只在 resource server 处产生语义（scope 等）。</p><p>参考 <a href="https://tools.ietf.org/html/rfc6749#section-10.16">rfc6749#section-10.16</a></p><li><p><strong>Access Token 仅代表权限，那么它如何和用户关联起来呢？换言之，一个 Access Token 的 Scope 能访问其他用户的资源么？</strong></p><p>参考 <a href="https://security.stackexchange.com/questions/199120/how-can-a-oauth2-resource-server-relate-an-access-token-to-the-user-that-authori/199178">How can a OAuth2 resource server relate an access token to the user that authorized it to prevent unauthorized access to other user resources?</a> 和 <a href="https://tools.ietf.org/html/rfc7662">rfc7662</a></p><li><p><strong>Code 模式下 Web Application 类型的 Client 将 Access Token 放置在服务器端使用，因为认为 user-agent 所在的环境不安全。但是 user-agent 和服务器端之间本身是有一层认证授权凭据（比如会话），如果这些信息容易泄露， 恶意 user-agent 同样可以使用它来操作 Access Token，那么把 Access Token 放在服务器端使用有什么安全意思呢，放置在 user-agent 处不是一样的吗？</strong></p><p>access token 是 resource owner 的原始授权信息，而会话仅代表和 web application 之间建立的认证授权关系，截获了会话并不意味着能够任意操作 access token（必须通过有限的接口操作），这和原始 access token 泄露是不同的。</p></ul></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/categories/web/'>Web</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/tags/oauth-2-0/" class="post-tag no-text-decoration" >OAuth 2.0</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=深入理解 OAuth 2.0 - Hongbo Lin&url=https://linhongbo.com/posts/dive-into-oauth2/" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=深入理解 OAuth 2.0 - Hongbo Lin&u=https://linhongbo.com/posts/dive-into-oauth2/" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://telegram.me/share?text=深入理解 OAuth 2.0 - Hongbo Lin&url=https://linhongbo.com/posts/dive-into-oauth2/" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted topbar-down"><div class="access"><div id="access-lastmod" class="post"> <span>Recent Update</span><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/posts/aosp-repo-guide/">使用 Repo 下载 AOSP 源代码</a><li><a href="/posts/shadowsocks-on-openwrt/">OpenWrt Shadowsocks 安装&配置指南</a><li><a href="/posts/how-to-use-clash-on-openwrt/">OpenWrt 下安装和使用 Clash (ShellCrash)</a><li><a href="/posts/openwrt-usual-configuration/">OpenWrt 常用网络配置</a><li><a href="/posts/shadowsocks-server-on-openwrt/">OpenWrt 安装 Shadowsocks Server</a></ul></div><div id="access-tags"> <span>Trending Tags</span><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/openwrt/">OpenWrt</a> <a class="post-tag" href="/tags/shadowsocks/">Shadowsocks</a> <a class="post-tag" href="/tags/nas/">NAS</a> <a class="post-tag" href="/tags/dexguard/">DexGuard</a> <a class="post-tag" href="/tags/apache/">Apache</a> <a class="post-tag" href="/tags/chromium/">Chromium</a> <a class="post-tag" href="/tags/clash/">Clash</a> <a class="post-tag" href="/tags/compiler/">Compiler</a> <a class="post-tag" href="/tags/ddns/">DDNS</a> <a class="post-tag" href="/tags/esxi/">ESXi</a></div></div></div><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"> <span class="pl-3 pt-2 mb-2">Contents</span><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div class="col-12 col-lg-11 col-xl-8"><div id="post-extend-wrapper" class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><div id="related-posts" class="mt-5 mb-2 mb-sm-4"><h3 class="pt-2 mt-1 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/posts/set-up-apache-virtual-hosts/"><div class="card-body"> <span class="timeago small" >May 6, 2018<i class="unloaded">2018-05-06T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>CentOS 7 Apache 配置 Virtual Host （虚拟主机）</h3><div class="text-muted small"><p> 简介 Apache 是世界上最流行的网页服务器，其功能和组件被分解为不同的单元与功能，其中基础的配置单元是站点（域名）。Apache 用 Virtul Host 表示站点，通过支持多 Virtual Host ，便能够在单个服务器上托管多个站点，共享服务器资源，而且保持互相独立。这里要注意子域名和一级域名一样，都可作为不同的 Virtual Host 进行配置。 这篇教程，将介绍在 Ce...</p></div></div></a></div><div class="card"> <a href="/posts/setup-a-tls-test-server/"><div class="card-body"> <span class="timeago small" >Sep 18, 2018<i class="unloaded">2018-09-18T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>搭建 SSL/TLS 测试服务器</h3><div class="text-muted small"><p> 本文介绍了在 Ubuntu 18.04 环境下利用 OpenSSL 的 s_server 命令搭建 SSL/TLS 测试服务器的方法，可用于测试 Chrome 浏览器下的各种 SSL/TLS 错误。 创建私有 CA 和服务器证书 以 Chrome NET::ERT_CERT_WEAK_KEY 错误为例，要构造此场景，需要服务器证书的密钥长度小于 1024 bit，我的方法是先生成私有 C...</p></div></div></a></div><div class="card"> <a href="/posts/captive-portal-handling-of-chrome/"><div class="card-body"> <span class="timeago small" >Oct 22, 2018<i class="unloaded">2018-10-22T00:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Chrome 的 Captive Portal 处理机制</h3><div class="text-muted small"><p> Google Chrome 在 M63 版本引入了一项修改以解决 Captive Portal 场景下的用户登录问题 —— 当未登录的用户访问 HTTPS 网站时，由于 Captive Portal 的拦截，浏览器会出现网络超时、SSL/TLS 告警等问题。本文详细介绍了 Chrome M63 的这项机制。 背景 Captive Portal 中文通常译作“强制主页”或“强制登录门户”，...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"> <a href="/posts/openwrt-cloudflare-ddns/" class="btn btn-outline-primary" prompt="Older"><p>OpenWrt Cloudflare DDNS</p></a> <a href="/posts/app-ops/" class="btn btn-outline-primary" prompt="Newer"><p>理解 App Ops</p></a></div></div></div></div><footer class="d-flex w-100 justify-content-center"><div class="d-flex justify-content-between align-items-center"><div class="footer-left"><p class="mb-0"> © 2024 <a href="https://twitter.com/username">Hongbo Lin</a>. <span data-toggle="tooltip" data-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author.">Some rights reserved.</span></p></div><div class="footer-right"><p class="mb-0"> Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></footer></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><h4 class="text-muted mb-4">Trending Tags</h4><a class="post-tag" href="/tags/openwrt/">OpenWrt</a> <a class="post-tag" href="/tags/shadowsocks/">Shadowsocks</a> <a class="post-tag" href="/tags/nas/">NAS</a> <a class="post-tag" href="/tags/dexguard/">DexGuard</a> <a class="post-tag" href="/tags/apache/">Apache</a> <a class="post-tag" href="/tags/chromium/">Chromium</a> <a class="post-tag" href="/tags/clash/">Clash</a> <a class="post-tag" href="/tags/compiler/">Compiler</a> <a class="post-tag" href="/tags/ddns/">DDNS</a> <a class="post-tag" href="/tags/esxi/">ESXi</a></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a> <script src="https://cdn.jsdelivr.net/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">Oops! No result founds.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="https://cdn.jsdelivr.net/combine/npm/lozad/dist/lozad.min.js,npm/magnific-popup@1/dist/jquery.magnific-popup.min.js,npm/clipboard@2/dist/clipboard.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.16.1,npm/bootstrap@4/dist/js/bootstrap.min.js"></script> <script defer src="/app.js"></script> <script defer src="https://www.googletagmanager.com/gtag/js?id=UA-118658920-3"></script> <script> document.addEventListener("DOMContentLoaded", function(event) { window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'UA-118658920-3'); }); </script>
