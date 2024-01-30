@@ -42,9 +42,9 @@ repo 是 Python 脚本，依赖于 Python。前往 https://www.python.org/downlo
 编辑 `%USERPROFILE%/.bash_profile`（Windows）或 `~/.bash_profile`（Linux），增加如下代理配置：
 
 ```sh
-export http_proxy= http://user:password@example.com:8080
-export https_proxy = $http_proxy
-export ftp_proxy = $http_proxy
+export http_proxy=http://user:password@example.com:8080
+export https_proxy=$http_proxy
+export ftp_proxy=$http_proxy
 ```
 
 完成上述代理配置后，bash（或 git bash）中运行的 Git 和 Repo 命令就会以代理的方式连接服务器了。
